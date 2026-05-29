@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { useData } from '@/lib/context/DataContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Plus, Trash2, Edit2 } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils/formatting';
 import AddLoanModal from './AddLoanModal';
 
@@ -29,8 +29,7 @@ export default function LoansPage() {
       {/* Loans Grid */}
       {data.loans.length === 0 ? (
         <Card className="p-12 border border-border shadow-sm text-center">
-          <p className="text-muted-foreground mb-4">No loans yet. Add your first loan to get started.</p>
-          <Button onClick={() => setShowAddLoanModal(true)}>Add Your First Loan</Button>
+          <p className="text-muted-foreground">No loans yet. Use the Add Loan button above to get started.</p>
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

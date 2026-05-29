@@ -5,13 +5,111 @@ import { useData } from '@/lib/context/DataContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Download, Trash2, Upload } from 'lucide-react';
+import type { Card as CardType, EMI, Loan, Transaction, FinancialData } from '@/lib/types';
+
+type ExportCard = CardType & { transactions: Transaction[] };
+type ExportLoan = Loan & { emis: EMI[] };
+
+const buildExportData = (data: FinancialData): { cards: ExportCard[]; loans: ExportLoan[] } => {
+  const cards = data.cards.map((card) => ({
+    ...card,
+    transactions: data.transactions.filter((transaction) => transaction.cardId === card.id),
+  }));
+
+  const loans = data.loans.map((loan) => ({
+    ...loan,
+    emis: data.emis.filter((emi) => emi.loanId === loan.id),
+  }));
+
+  return {
+    cards,
+    loans,
+  };
+};
+
+const normalizeImportedData = (imported: unknown): FinancialData | null => {
+  if (!imported || typeof imported !== 'object') {
+    return null;
+  }
+
+  const payload = imported as {
+    cards?: Array<CardType & { transactions?: Transaction[] }>;
+    loans?: Array<Loan & { emis?: EMI[] }>;
+    transactions?: Transaction[];
+    emis?: EMI[];
+  };
+
+  if (Array.isArray(payload.cards) && Array.isArray(payload.loans)) {
+    const hasNestedTransactions = payload.cards.some((card) => Array.isArray(card.transactions));
+    const hasNestedEmis = payload.loans.some((loan) => Array.isArray(loan.emis));
+
+    if (!hasNestedTransactions && !hasNestedEmis) {
+      return {
+        cards: payload.cards as CardType[],
+        transactions: Array.isArray(payload.transactions) ? payload.transactions : [],
+        loans: payload.loans as Loan[],
+        emis: Array.isArray(payload.emis) ? payload.emis : [],
+      };
+    }
+
+    const transactions = payload.cards.flatMap((card) =>
+      Array.isArray(card.transactions)
+        ? card.transactions.map((transaction) => ({
+            ...transaction,
+            cardId: transaction.cardId || card.id,
+          }))
+        : []
+    );
+
+    const emis = payload.loans.flatMap((loan) =>
+      Array.isArray(loan.emis)
+        ? loan.emis.map((emi) => ({
+            ...emi,
+            loanId: emi.loanId || loan.id,
+          }))
+        : []
+    );
+
+    return {
+      cards: payload.cards.map((card) => {
+        const cardFields = { ...card };
+        delete cardFields.transactions;
+        return cardFields as CardType;
+      }),
+      transactions,
+      loans: payload.loans.map((loan) => {
+        const loanFields = { ...loan };
+        delete loanFields.emis;
+        return loanFields as Loan;
+      }),
+      emis,
+    };
+  }
+
+  if (
+    Array.isArray(payload.cards) &&
+    Array.isArray(payload.transactions) &&
+    Array.isArray(payload.loans) &&
+    Array.isArray(payload.emis)
+  ) {
+    return {
+      cards: payload.cards,
+      transactions: payload.transactions,
+      loans: payload.loans,
+      emis: payload.emis,
+    };
+  }
+
+  return null;
+};
 
 export default function SettingsPage() {
-  const { data } = useData();
+  const { data, importData, clearAllData } = useData();
   const [importError, setImportError] = useState('');
 
   const handleExportData = () => {
-    const dataStr = JSON.stringify(data, null, 2);
+    const exportData = buildExportData(data);
+    const dataStr = JSON.stringify(exportData, null, 2);
     const dataBlob = new Blob([dataStr], { type: 'application/json' });
     const url = URL.createObjectURL(dataBlob);
     const link = document.createElement('a');
@@ -28,25 +126,35 @@ export default function SettingsPage() {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       try {
-        const imported = JSON.parse(event.target?.result as string);
-        localStorage.setItem('financial_data', JSON.stringify(imported));
+        const imported = normalizeImportedData(JSON.parse(event.target?.result as string));
+        if (!imported) {
+          throw new Error('Invalid data format');
+        }
+
+        const success = await importData(imported);
+        if (!success) {
+          throw new Error('Failed to import to database');
+        }
+
         setImportError('');
-        alert('Data imported successfully! Please refresh the page.');
-        window.location.reload();
-      } catch (error) {
+        alert('Data imported successfully.');
+      } catch {
         setImportError('Failed to import data. Please ensure the file is valid JSON.');
       }
     };
     reader.readAsText(file);
   };
 
-  const handleClearData = () => {
+  const handleClearData = async () => {
     if (window.confirm('Are you sure you want to delete all data? This cannot be undone.')) {
-      localStorage.removeItem('financial_data');
-      alert('All data has been cleared. Please refresh the page.');
-      window.location.reload();
+      const success = await clearAllData();
+      if (success) {
+        alert('All data has been cleared.');
+      } else {
+        alert('Failed to clear data. Please try again.');
+      }
     }
   };
 

@@ -35,7 +35,7 @@ export default function AddTransactionModal({
   cardId: defaultCardId,
 }: AddTransactionModalProps) {
   const { cards, addTransaction } = useData();
-  const [formData, setFormData] = useState({
+  const getInitialFormData = () => ({
     cardId: defaultCardId || '',
     amount: '',
     description: '',
@@ -43,7 +43,21 @@ export default function AddTransactionModal({
     date: new Date().toISOString().split('T')[0],
   });
 
+  const [formData, setFormData] = useState(getInitialFormData);
+
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const resetForm = () => {
+    setFormData(getInitialFormData());
+    setErrors({});
+  };
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      resetForm();
+    }
+    onOpenChange(nextOpen);
+  };
 
   const selectedCard = useMemo(() => {
     return cards.find((card: Card) => card.id === formData.cardId);
@@ -76,14 +90,14 @@ export default function AddTransactionModal({
     );
   }, [formData]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validateForm()) {
       return;
     }
 
-    addTransaction({
+    await addTransaction({
       cardId: formData.cardId,
       amount: parseFloat(formData.amount),
       description: formData.description,
@@ -92,19 +106,11 @@ export default function AddTransactionModal({
       type: 'debit',
     });
 
-    setFormData({
-      cardId: defaultCardId || '',
-      amount: '',
-      description: '',
-      category: 'Food',
-      date: new Date().toISOString().split('T')[0],
-    });
-    setErrors({});
-    onOpenChange(false);
+    handleOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add Transaction</DialogTitle>
@@ -113,7 +119,7 @@ export default function AddTransactionModal({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Which Card I Spent */}
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="cardId">Which Card I Spent *</Label>
             <Select
               value={formData.cardId}
@@ -153,7 +159,7 @@ export default function AddTransactionModal({
           )}
 
           {/* Amount */}
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="amount">Amount *</Label>
             <Input
               id="amount"
@@ -173,7 +179,7 @@ export default function AddTransactionModal({
           </div>
 
           {/* Description */}
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="description">Description *</Label>
             <Input
               id="description"
@@ -191,7 +197,7 @@ export default function AddTransactionModal({
           </div>
 
           {/* Category */}
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="category">Category</Label>
             <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
               <SelectTrigger>
@@ -208,7 +214,7 @@ export default function AddTransactionModal({
           </div>
 
           {/* Date */}
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="date">Date</Label>
             <Input
               id="date"
@@ -220,10 +226,7 @@ export default function AddTransactionModal({
 
           {/* Form Actions */}
           <div className="flex gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={() => {
-              onOpenChange(false);
-              setErrors({});
-            }}>
+            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
               Cancel
             </Button>
             <Button type="submit" className="flex-1" disabled={!isFormValid}>

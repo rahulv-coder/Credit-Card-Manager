@@ -1,12 +1,21 @@
 import type { Metadata } from 'next'
-import { Geist, Geist_Mono } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
+import { IBM_Plex_Mono, Plus_Jakarta_Sans } from 'next/font/google'
 import './globals.css'
 import { DataProvider } from '@/lib/context/DataContext'
 import LayoutWrapper from '@/components/layout/LayoutWrapper'
+import { ThemeProvider } from '@/components/theme-provider'
 
-const _geist = Geist({ subsets: ["latin"] });
-const _geistMono = Geist_Mono({ subsets: ["latin"] });
+const plusJakartaSans = Plus_Jakarta_Sans({
+  subsets: ['latin'],
+  variable: '--font-plus-jakarta-sans',
+})
+
+const ibmPlexMono = IBM_Plex_Mono({
+  weight: '400',
+  subsets: ['latin'],
+  variable: '--font-ibm-plex-mono',
+})
 
 export const metadata: Metadata = {
   title: 'Credit Card Manager',
@@ -37,13 +46,18 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="bg-background">
-      <body className="font-sans antialiased">
-        <DataProvider>
-          <LayoutWrapper>
-            {children}
-          </LayoutWrapper>
-        </DataProvider>
+    <html lang="en" className={`${plusJakartaSans.variable} ${ibmPlexMono.variable}`} suppressHydrationWarning>
+      <body className="bg-background font-sans antialiased" suppressHydrationWarning>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <DataProvider>
+            <LayoutWrapper>{children}</LayoutWrapper>
+          </DataProvider>
+        </ThemeProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>

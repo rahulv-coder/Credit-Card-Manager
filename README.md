@@ -1,33 +1,65 @@
-# Version-1
+# Credit Card Manager
 
-This is a [Next.js](https://nextjs.org) project bootstrapped with [v0](https://v0.app).
+A personal finance web app to manage credit cards, loans, EMIs, and transactions.
 
-## Built with v0
+## Tech Stack
 
-This repository is linked to a [v0](https://v0.app) project. You can continue developing by visiting the link below -- start new chats to make changes, and v0 will push commits directly to this repo. Every merge to `main` will automatically deploy.
+- Next.js 16 (App Router)
+- React 19 + TypeScript
+- Tailwind CSS 4
+- Radix UI + shadcn/ui components
+- Supabase Auth + Postgres
 
-[Continue working on v0 →](https://v0.app/chat/projects/prj_ZN8X3TF738v2FPJxcH3hkTPwAIyn)
-
-## Getting Started
-
-First, run the development server:
+## Run Locally
 
 ```bash
+npm install
+cp .env.example .env.local
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open http://localhost:3000 in your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Supabase Setup
 
-## Learn More
+1. Create a free Supabase project.
+2. Open SQL Editor and run the script in `supabase/schema.sql`.
+3. In Supabase Auth settings, enable Email/Password sign-in.
+4. Copy credentials to `.env.local`:
 
-To learn more, take a look at the following resources:
+```bash
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-- [v0 Documentation](https://v0.app/docs) - learn about v0 and how to use it.
+## Deployment (Free)
+
+1. Push this repository to GitHub.
+2. Import the repo into Vercel (Hobby/free plan).
+3. Add `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` in Vercel project environment variables.
+4. Deploy.
+
+## Quality Commands
+
+```bash
+npm run lint
+npm run lint:fix
+npm run typecheck
+npm run build
+```
+
+## Project Structure
+
+- `app/`: App Router pages and layout
+- `components/`: Feature and UI components
+- `lib/context/DataContext.tsx`: App data store (Supabase-backed)
+- `lib/supabase/client.ts`: Browser Supabase client
+- `middleware.ts`: Route protection based on Supabase auth session
+- `supabase/schema.sql`: Database schema + RLS policies
+- `lib/utils/`: Domain calculations, formatting, and validation helpers
+- `types/`: Shared TypeScript types
+
+## Notes
+
+- Data is user-scoped in Supabase with Row Level Security.
+- CVV is intentionally not collected/stored.

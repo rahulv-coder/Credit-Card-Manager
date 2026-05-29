@@ -1,7 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Menu, X } from 'lucide-react';
+import { X } from 'lucide-react';
+import { usePathname } from 'next/navigation';
 import Navigation from './Navigation';
 import Header from './Header';
 
@@ -11,6 +12,11 @@ interface LayoutWrapperProps {
 
 export default function LayoutWrapper({ children }: LayoutWrapperProps) {
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const pathname = usePathname();
+
+  if (pathname === '/login') {
+    return <>{children}</>;
+  }
 
   return (
     <div className="flex h-screen bg-background">
@@ -55,10 +61,7 @@ export default function LayoutWrapper({ children }: LayoutWrapperProps) {
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header
-          onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)}
-          isDrawerOpen={isDrawerOpen}
-        />
+        <Header onMenuClick={() => setIsDrawerOpen(!isDrawerOpen)} />
         <main className="flex-1 overflow-auto">
           <div className="min-h-full">
             {children}

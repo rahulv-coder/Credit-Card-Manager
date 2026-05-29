@@ -50,3 +50,14 @@ export interface FinancialData {
   loans: Loan[];
   emis: EMI[];
 }
+
+export interface UserProfile {
+  userId: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  gender: 'male' | 'female';
+  mobile: string;
+  createdAt: number;
+  updatedAt: number;
+}

@@ -4,6 +4,7 @@ import React from 'react';
 import { Card } from '@/components/ui/card';
 import { formatCurrency } from '@/lib/utils/formatting';
 import { CreditCard, Wallet, TrendingUp, Calendar, Banknote } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 
 interface FinancialSummaryProps {
   totalCreditLimit: number;
@@ -13,7 +14,14 @@ interface FinancialSummaryProps {
   totalLoans: number;
 }
 
-const SummaryCard = ({ icon: Icon, label, value, color }: any) => (
+interface SummaryCardProps {
+  icon: LucideIcon;
+  label: string;
+  value: string | number;
+  color: string;
+}
+
+const SummaryCard = ({ icon: Icon, label, value, color }: SummaryCardProps) => (
   <Card className="p-4 md:p-6 bg-gradient-to-br from-white to-secondary dark:from-card dark:to-secondary border-0 shadow-sm hover:shadow-md transition-shadow">
     <div className="flex items-start justify-between">
       <div className="space-y-2">

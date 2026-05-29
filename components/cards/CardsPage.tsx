@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { useData } from '@/lib/context/DataContext';
-import { Card as CardType } from '@/lib/types';
 import CardCarousel from './CardCarousel';
 import CardDetails from './CardDetails';
 import AddCardModal from './AddCardModal';

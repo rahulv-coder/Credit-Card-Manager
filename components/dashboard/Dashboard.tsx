@@ -17,7 +17,8 @@ import QuickActions from './QuickActions';
 import SpendingChart from './SpendingChart';
 
 export default function Dashboard() {
-  const { data } = useData();
+  const { data, profile, user } = useData();
+  const firstName = profile?.firstName || user?.email?.split('@')[0] || 'there';
 
   const totalBalance = calculateTotalBalance(data.cards, data.transactions);
   const totalCreditLimit = calculateTotalCreditLimit(data.cards);
@@ -31,7 +32,7 @@ export default function Dashboard() {
       {/* Header */}
       <div className="space-y-2">
         <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-        <p className="text-muted-foreground">Welcome back! Here's your financial overview.</p>
+        <p className="text-muted-foreground">Welcome back, {firstName}! Here&apos;s your financial overview.</p>
       </div>
 
       {/* Financial Summary */}

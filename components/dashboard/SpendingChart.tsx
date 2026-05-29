@@ -38,7 +38,9 @@ export default function SpendingChart({ transactions }: SpendingChartProps) {
                 borderRadius: '8px',
               }}
               labelStyle={{ color: 'var(--foreground)' }}
-              formatter={(value: any) => `₹${value.toLocaleString('en-IN')}`}
+              formatter={(value: number | string) =>
+                `₹${Number(value).toLocaleString('en-IN')}`
+              }
             />
             <Line
               type="monotone"

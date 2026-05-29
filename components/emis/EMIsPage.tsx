@@ -3,19 +3,19 @@
 import React, { useMemo } from 'react';
 import { useData } from '@/lib/context/DataContext';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { CheckCircle2, Circle, Trash2 } from 'lucide-react';
-import { formatCurrency, formatDate, getMonthName } from '@/lib/utils/formatting';
+import { formatCurrency, formatDate } from '@/lib/utils/formatting';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export default function EMIsPage() {
   const { data, updateEMI, deleteEMI } = useData();
+  const { emis, loans } = data;
 
   const groupedEMIs = useMemo(() => {
-    const grouped: { [key: string]: typeof data.emis } = {};
+    const grouped: { [key: string]: typeof emis } = {};
 
-    data.emis.forEach((emi) => {
-      const loan = data.loans.find(l => l.id === emi.loanId);
+    emis.forEach((emi) => {
+      const loan = loans.find(l => l.id === emi.loanId);
       const loanName = loan?.name || 'Unknown Loan';
 
       if (!grouped[loanName]) {
@@ -30,20 +30,20 @@ export default function EMIsPage() {
     });
 
     return grouped;
-  }, [data.emis, data.loans]);
+  }, [emis, loans]);
 
   const stats = useMemo(() => {
-    const totalEMIs = data.emis.length;
-    const paidEMIs = data.emis.filter(e => e.isPaid).length;
+    const totalEMIs = emis.length;
+    const paidEMIs = emis.filter(e => e.isPaid).length;
     const pendingEMIs = totalEMIs - paidEMIs;
-    const totalPending = data.emis
+    const totalPending = emis
       .filter(e => !e.isPaid)
       .reduce((sum, e) => sum + e.emiAmount, 0);
 
     return { totalEMIs, paidEMIs, pendingEMIs, totalPending };
-  }, [data.emis]);
+  }, [emis]);
 
-  const toggleEMIPaid = (emiId: string, emi: typeof data.emis[0]) => {
+  const toggleEMIPaid = (emiId: string, emi: typeof emis[0]) => {
     updateEMI(emiId, {
       ...emi,
       isPaid: !emi.isPaid,

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -36,18 +36,32 @@ interface AddCardModalProps {
 
 export default function AddCardModal({ open, onOpenChange }: AddCardModalProps) {
   const { addCard } = useData();
-  const [formData, setFormData] = useState({
+  const getInitialFormData = () => ({
     name: '',
     cardNumber: '',
     cardHolder: '',
     expiryDate: '',
-    issuer: 'HDFC Bank',
+    issuer: '',
     customBankName: '',
     creditLimit: '',
     color: CARD_COLORS[0],
   });
 
+  const [formData, setFormData] = useState(getInitialFormData);
+
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const resetForm = () => {
+    setFormData(getInitialFormData());
+    setErrors({});
+  };
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      resetForm();
+    }
+    onOpenChange(nextOpen);
+  };
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -72,6 +86,10 @@ export default function AddCardModal({ open, onOpenChange }: AddCardModalProps) 
       newErrors.customBankName = 'Please enter the bank name';
     }
 
+    if (!formData.issuer) {
+      newErrors.issuer = 'Please select an issuer';
+    }
+
     if (!validateAmount(formData.creditLimit) || parseInt(formData.creditLimit) <= 0) {
       newErrors.creditLimit = 'Credit limit must be a positive number';
     }
@@ -79,18 +97,6 @@ export default function AddCardModal({ open, onOpenChange }: AddCardModalProps) 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
-
-  const isFormValid = useMemo(() => {
-    return (
-      formData.name.trim() !== '' &&
-      validateCardNumber(formData.cardNumber) &&
-      validateCardholderName(formData.cardHolder) &&
-      validateExpiryDate(formData.expiryDate) &&
-      (formData.issuer !== 'Other' || formData.customBankName.trim() !== '') &&
-      validateAmount(formData.creditLimit) &&
-      parseInt(formData.creditLimit) > 0
-    );
-  }, [formData]);
 
   const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const formatted = formatCardNumber(e.target.value);
@@ -110,16 +116,14 @@ export default function AddCardModal({ open, onOpenChange }: AddCardModalProps) 
     }
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!validateForm()) {
       return;
     }
 
-    const issuerName = formData.issuer === 'Other' ? formData.customBankName : formData.issuer;
-
-    addCard({
+    await addCard({
       name: formData.name,
       cardNumber: formData.cardNumber,
       cardHolder: formData.cardHolder,
@@ -131,22 +135,11 @@ export default function AddCardModal({ open, onOpenChange }: AddCardModalProps) 
       color: formData.color,
     });
 
-    setFormData({
-      name: '',
-      cardNumber: '',
-      cardHolder: '',
-      expiryDate: '',
-      issuer: 'HDFC Bank',
-      customBankName: '',
-      creditLimit: '',
-      color: CARD_COLORS[0],
-    });
-    setErrors({});
-    onOpenChange(false);
+    handleOpenChange(false);
   };
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New Card</DialogTitle>
@@ -155,11 +148,11 @@ export default function AddCardModal({ open, onOpenChange }: AddCardModalProps) 
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {/* Card Name */}
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="name">Card Name *</Label>
             <Input
               id="name"
-              placeholder="e.g., Primary HDFC Card"
+              placeholder="Name of the Card"
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
               className={errors.name ? 'border-destructive' : ''}
@@ -168,15 +161,15 @@ export default function AddCardModal({ open, onOpenChange }: AddCardModalProps) 
           </div>
 
           {/* Card Number */}
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="cardNumber">Card Number (16 digits) *</Label>
             <Input
               id="cardNumber"
-              placeholder="1234 5678 9101 1121"
+              placeholder="XXXX  XXXX  XXXX  XXXX"
               maxLength={19}
               value={formData.cardNumber}
               onChange={handleCardNumberChange}
-              className={errors.cardNumber ? 'border-destructive' : ''}
+              className={`tracking-[0.5em] ${errors.cardNumber ? 'border-destructive' : ''}`}
             />
             {errors.cardNumber ? (
               <p className="text-xs text-destructive mt-1">{errors.cardNumber}</p>
@@ -188,7 +181,7 @@ export default function AddCardModal({ open, onOpenChange }: AddCardModalProps) 
           </div>
 
           {/* Cardholder Name */}
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="cardHolder">Cardholder Name *</Label>
             <Input
               id="cardHolder"
@@ -200,53 +193,51 @@ export default function AddCardModal({ open, onOpenChange }: AddCardModalProps) 
             {errors.cardHolder && <p className="text-xs text-destructive mt-1">{errors.cardHolder}</p>}
           </div>
 
-          {/* Expiry Date and Issuer */}
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="expiryDate">Valid Till (MM/YY) *</Label>
-              <Input
-                id="expiryDate"
-                placeholder="12/25"
-                maxLength={5}
-                value={formData.expiryDate}
-                onChange={handleExpiryDateChange}
-                className={errors.expiryDate ? 'border-destructive' : ''}
-              />
-              {errors.expiryDate ? (
-                <p className="text-xs text-destructive mt-1">{errors.expiryDate}</p>
-              ) : (
-                <p className="text-xs text-muted-foreground mt-1">Month: 01-12</p>
-              )}
-            </div>
-            <div>
-              <Label htmlFor="issuer">Issuer *</Label>
-              <Select 
-                value={formData.issuer} 
-                onValueChange={(value) => {
-                  setFormData({ ...formData, issuer: value, customBankName: '' });
-                  if (errors.issuer) {
-                    setErrors({ ...errors, issuer: '' });
-                  }
-                }}
-              >
-                <SelectTrigger className={errors.issuer ? 'border-destructive' : ''}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {CARD_ISSUERS.map((issuer) => (
-                    <SelectItem key={issuer} value={issuer}>
-                      {issuer}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.issuer && <p className="text-xs text-destructive mt-1">{errors.issuer}</p>}
-            </div>
+          {/* Expiry Date */}
+          <div className="space-y-2">
+            <Label htmlFor="expiryDate">Valid Till (MM/YY) *</Label>
+            <Input
+              id="expiryDate"
+              placeholder="12/25"
+              maxLength={5}
+              value={formData.expiryDate}
+              onChange={handleExpiryDateChange}
+              className={errors.expiryDate ? 'border-destructive' : ''}
+            />
+            {errors.expiryDate ? (
+              <p className="text-xs text-destructive mt-1">{errors.expiryDate}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-1">Month: 01-12</p>
+            )}
+          </div>
+
+          {/* Issuer */}
+          <div className="space-y-2">
+            <Label htmlFor="issuer">Issuer *</Label>
+            <Select
+              value={formData.issuer}
+              onValueChange={(value) => {
+                setFormData({ ...formData, issuer: value, customBankName: '' });
+                if (errors.issuer) setErrors({ ...errors, issuer: '' });
+              }}
+            >
+              <SelectTrigger className={`w-full ${errors.issuer ? 'border-destructive' : ''}`}>
+                <SelectValue placeholder="Select a bank" />
+              </SelectTrigger>
+              <SelectContent>
+                {CARD_ISSUERS.map((issuer) => (
+                  <SelectItem key={issuer} value={issuer}>
+                    {issuer}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.issuer && <p className="text-xs text-destructive mt-1">{errors.issuer}</p>}
           </div>
 
           {/* Custom Bank Name (if Other selected) */}
           {formData.issuer === 'Other' && (
-            <div>
+            <div className="space-y-2">
               <Label htmlFor="customBankName">Bank Name *</Label>
               <Input
                 id="customBankName"
@@ -265,7 +256,7 @@ export default function AddCardModal({ open, onOpenChange }: AddCardModalProps) 
           )}
 
           {/* Credit Limit */}
-          <div>
+          <div className="space-y-2">
             <Label htmlFor="creditLimit">Credit Limit *</Label>
             <Input
               id="creditLimit"
@@ -284,7 +275,7 @@ export default function AddCardModal({ open, onOpenChange }: AddCardModalProps) 
           </div>
 
           {/* Card Color */}
-          <div>
+          <div className="space-y-2">
             <Label>Card Color</Label>
             <div className="flex gap-2 flex-wrap">
               {CARD_COLORS.map((color) => (
@@ -304,13 +295,10 @@ export default function AddCardModal({ open, onOpenChange }: AddCardModalProps) 
 
           {/* Form Actions */}
           <div className="flex gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={() => {
-              onOpenChange(false);
-              setErrors({});
-            }}>
+            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1" disabled={!isFormValid}>
+            <Button type="submit" className="flex-1">
               Add Card
             </Button>
           </div>
