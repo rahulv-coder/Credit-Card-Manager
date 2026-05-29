@@ -2,6 +2,7 @@
   "name": "credit-card-manager",
   "version": "0.1.0",
   "private": true,
+  "author": "Rahul Vasanthakumar",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
