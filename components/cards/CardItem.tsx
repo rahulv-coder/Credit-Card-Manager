@@ -28,7 +28,7 @@ export default function CardItem({ card, isSelected = false }: CardItemProps) {
         </div>
         <div className="text-right text-xs">
           <p className="font-medium opacity-75">Issuer</p>
-          <p className="font-semibold">{card.issuer}</p>
+          <p className="font-semibold">{card.customBankName || card.issuer}</p>
         </div>
       </div>
 

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -13,6 +13,12 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { useData } from '@/lib/context/DataContext';
 import { calculateEMI } from '@/lib/utils/calculations';
+import {
+  validateLoanAmount,
+  validateInterestRate,
+  validateTenure,
+  formatTenureDisplay,
+} from '@/lib/utils/validation';
 
 interface AddLoanModalProps {
   open: boolean;
@@ -26,16 +32,50 @@ export default function AddLoanModal({ open, onOpenChange }: AddLoanModalProps) 
     principal: '',
     interestRate: '',
     startDate: new Date().toISOString().split('T')[0],
-    durationMonths: '',
+    tenureMonths: 60,
   });
+
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [emiAmount, setEmiAmount] = useState(0);
 
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.name.trim()) {
+      newErrors.name = 'Loan name is required';
+    }
+
+    if (!validateLoanAmount(formData.principal)) {
+      newErrors.principal = 'Principal amount must be a positive number';
+    }
+
+    if (!validateInterestRate(formData.interestRate)) {
+      newErrors.interestRate = 'Interest rate must be between 0 and 50';
+    }
+
+    if (!validateTenure(formData.tenureMonths)) {
+      newErrors.tenureMonths = 'Tenure must be between 1 and 360 months';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const isFormValid = useMemo(() => {
+    return (
+      formData.name.trim() !== '' &&
+      validateLoanAmount(formData.principal) &&
+      validateInterestRate(formData.interestRate) &&
+      validateTenure(formData.tenureMonths)
+    );
+  }, [formData]);
+
   const handleCalculateEMI = () => {
-    if (formData.principal && formData.interestRate && formData.durationMonths) {
+    if (formData.principal && formData.interestRate && formData.tenureMonths) {
       const emi = calculateEMI(
         parseFloat(formData.principal),
         parseFloat(formData.interestRate),
-        parseInt(formData.durationMonths)
+        formData.tenureMonths
       );
       setEmiAmount(emi);
     }
@@ -44,25 +84,25 @@ export default function AddLoanModal({ open, onOpenChange }: AddLoanModalProps) 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name || !formData.principal || !formData.interestRate || !formData.durationMonths) {
-      alert('Please fill all fields');
+    if (!validateForm()) {
       return;
     }
 
     const principal = parseFloat(formData.principal);
     const startDate = new Date(formData.startDate).getTime();
-    const durationMonths = parseInt(formData.durationMonths);
+    const durationMonths = formData.tenureMonths;
     const endDate = new Date(startDate);
     endDate.setMonth(endDate.getMonth() + durationMonths);
 
     const loanId = `loan_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
-    // Add loan
+    // Add loan with tenureMonths
     addLoan({
       name: formData.name,
       principal,
       currentAmount: principal,
       interestRate: parseFloat(formData.interestRate),
+      tenureMonths: durationMonths,
       startDate,
       endDate: endDate.getTime(),
     });
@@ -87,33 +127,43 @@ export default function AddLoanModal({ open, onOpenChange }: AddLoanModalProps) 
       principal: '',
       interestRate: '',
       startDate: new Date().toISOString().split('T')[0],
-      durationMonths: '',
+      tenureMonths: 60,
     });
     setEmiAmount(0);
+    setErrors({});
     onOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New Loan</DialogTitle>
-          <DialogDescription>Create a new loan and auto-generate EMI schedule</DialogDescription>
+          <DialogDescription>Create a new loan and auto-generate EMI schedule. All fields are required.</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Loan Name */}
           <div>
-            <Label htmlFor="name">Loan Name</Label>
+            <Label htmlFor="name">Loan Name *</Label>
             <Input
               id="name"
               placeholder="e.g., Home Loan"
               value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+              onChange={(e) => {
+                setFormData({ ...formData, name: e.target.value });
+                if (errors.name) {
+                  setErrors({ ...errors, name: '' });
+                }
+              }}
+              className={errors.name ? 'border-destructive' : ''}
             />
+            {errors.name && <p className="text-xs text-destructive mt-1">{errors.name}</p>}
           </div>
 
+          {/* Principal Amount */}
           <div>
-            <Label htmlFor="principal">Principal Amount</Label>
+            <Label htmlFor="principal">Principal Amount *</Label>
             <Input
               id="principal"
               type="number"
@@ -121,41 +171,68 @@ export default function AddLoanModal({ open, onOpenChange }: AddLoanModalProps) 
               value={formData.principal}
               onChange={(e) => {
                 setFormData({ ...formData, principal: e.target.value });
+                if (errors.principal) {
+                  setErrors({ ...errors, principal: '' });
+                }
                 setEmiAmount(0);
               }}
+              className={errors.principal ? 'border-destructive' : ''}
             />
+            {errors.principal && <p className="text-xs text-destructive mt-1">{errors.principal}</p>}
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <Label htmlFor="interestRate">Interest Rate (% p.a.)</Label>
-              <Input
-                id="interestRate"
-                type="number"
-                step="0.01"
-                placeholder="7.5"
-                value={formData.interestRate}
-                onChange={(e) => {
-                  setFormData({ ...formData, interestRate: e.target.value });
-                  setEmiAmount(0);
-                }}
-              />
-            </div>
-            <div>
-              <Label htmlFor="durationMonths">Duration (Months)</Label>
-              <Input
-                id="durationMonths"
-                type="number"
-                placeholder="60"
-                value={formData.durationMonths}
-                onChange={(e) => {
-                  setFormData({ ...formData, durationMonths: e.target.value });
-                  setEmiAmount(0);
-                }}
-              />
-            </div>
+          {/* Interest Rate */}
+          <div>
+            <Label htmlFor="interestRate">Interest Rate (% p.a.) *</Label>
+            <Input
+              id="interestRate"
+              type="number"
+              step="0.01"
+              placeholder="7.5"
+              value={formData.interestRate}
+              onChange={(e) => {
+                setFormData({ ...formData, interestRate: e.target.value });
+                if (errors.interestRate) {
+                  setErrors({ ...errors, interestRate: '' });
+                }
+                setEmiAmount(0);
+              }}
+              className={errors.interestRate ? 'border-destructive' : ''}
+            />
+            {errors.interestRate && <p className="text-xs text-destructive mt-1">{errors.interestRate}</p>}
           </div>
 
+          {/* Tenure Slider */}
+          <div>
+            <div className="flex justify-between items-center">
+              <Label htmlFor="tenureMonths">Tenure *</Label>
+              <span className="text-sm font-semibold text-primary">{formatTenureDisplay(formData.tenureMonths)}</span>
+            </div>
+            <div className="space-y-2">
+              <input
+                id="tenureMonths"
+                type="range"
+                min="1"
+                max="360"
+                value={formData.tenureMonths}
+                onChange={(e) => {
+                  setFormData({ ...formData, tenureMonths: parseInt(e.target.value) });
+                  if (errors.tenureMonths) {
+                    setErrors({ ...errors, tenureMonths: '' });
+                  }
+                  setEmiAmount(0);
+                }}
+                className="w-full h-2 bg-secondary rounded-lg appearance-none cursor-pointer accent-primary"
+              />
+              <div className="flex justify-between text-xs text-muted-foreground">
+                <span>1 month</span>
+                <span>360 months</span>
+              </div>
+            </div>
+            {errors.tenureMonths && <p className="text-xs text-destructive mt-1">{errors.tenureMonths}</p>}
+          </div>
+
+          {/* Start Date */}
           <div>
             <Label htmlFor="startDate">Start Date</Label>
             <Input
@@ -176,18 +253,23 @@ export default function AddLoanModal({ open, onOpenChange }: AddLoanModalProps) 
             Calculate EMI
           </Button>
 
+          {/* EMI Display */}
           {emiAmount > 0 && (
-            <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded border border-blue-200 dark:border-blue-800">
+            <div className="p-3 bg-secondary rounded border border-border">
               <p className="text-sm text-muted-foreground">Monthly EMI</p>
               <p className="text-xl font-bold text-primary">₹{emiAmount.toLocaleString('en-IN', { maximumFractionDigits: 0 })}</p>
             </div>
           )}
 
+          {/* Form Actions */}
           <div className="flex gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => {
+              onOpenChange(false);
+              setErrors({});
+            }}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1">
+            <Button type="submit" className="flex-1" disabled={!isFormValid}>
               Add Loan
             </Button>
           </div>

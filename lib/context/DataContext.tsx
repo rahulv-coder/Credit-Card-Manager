@@ -2,10 +2,10 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { Card, Transaction, Loan, EMI, FinancialData } from '@/lib/types';
-import { v4 as uuidv4 } from 'crypto';
 
 interface DataContextType {
   data: FinancialData;
+  cards: Card[];
   addCard: (card: Omit<Card, 'id' | 'createdAt'>) => void;
   updateCard: (id: string, card: Omit<Card, 'id' | 'createdAt'>) => void;
   deleteCard: (id: string) => void;
@@ -176,6 +176,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   return (
     <DataContext.Provider value={{
       data,
+      cards: data.cards,
       addCard,
       updateCard,
       deleteCard,

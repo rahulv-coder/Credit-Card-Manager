@@ -23,13 +23,21 @@ export const CARD_COLORS = [
 ];
 
 export const CARD_ISSUERS = [
-  'HDFC',
-  'ICICI',
-  'Axis',
+  'HDFC Bank',
+  'ICICI Bank',
+  'Axis Bank',
   'SBI',
+  'IDBI Bank',
+  'Kotak Mahindra',
+  'IndusInd Bank',
+  'Yes Bank',
+  'Federal Bank',
+  'HSBC',
+  'Citibank',
   'American Express',
+  'Diners Club',
   'Visa',
   'Mastercard',
-  'Rupay',
+  'RuPay',
   'Other',
 ];

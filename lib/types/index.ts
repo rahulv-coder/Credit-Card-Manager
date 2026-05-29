@@ -5,6 +5,7 @@ export interface Card {
   cardHolder: string;
   expiryDate: string;
   issuer: string;
+  customBankName?: string;
   creditLimit: number;
   currentBalance: number;
   color: string;
@@ -27,6 +28,7 @@ export interface Loan {
   principal: number;
   currentAmount: number;
   interestRate: number;
+  tenureMonths: number;
   startDate: number;
   endDate: number;
   createdAt: number;
