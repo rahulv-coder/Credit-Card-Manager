@@ -15,8 +15,34 @@ export const validateCardNumber = (value: string): boolean => {
 export const formatExpiryDate = (value: string): string => {
   const digits = value.replace(/\D/g, '');
   if (digits.length === 0) return '';
-  if (digits.length <= 2) return digits;
-  return `${digits.slice(0, 2)}/${digits.slice(2, 4)}`;
+  
+  if (digits.length === 1) {
+    // If first digit is 0 or 1, allow it; otherwise start with 0
+    const digit = parseInt(digits[0], 10);
+    return digit > 1 ? '0' : digits;
+  }
+  
+  if (digits.length === 2) {
+    // Validate month is 01-12
+    const month = parseInt(digits, 10);
+    if (month > 12) {
+      // If first digit is valid (0 or 1), keep it; otherwise reject
+      const firstDigit = parseInt(digits[0], 10);
+      return firstDigit <= 1 ? digits[0] : '';
+    }
+    return digits;
+  }
+  
+  // For 3 digits or more, format as MM/YY
+  const month = digits.slice(0, 2);
+  const monthNum = parseInt(month, 10);
+  
+  // Validate month is between 01-12
+  if (monthNum < 1 || monthNum > 12) {
+    return '';
+  }
+  
+  return `${month}/${digits.slice(2, 4)}`;
 };
 
 export const validateExpiryDate = (value: string): boolean => {
@@ -48,6 +74,7 @@ export const validateMonth = (month: string): boolean => {
 
 /** Amount validation */
 export const validateAmount = (value: number | string): boolean => {
+  if (value === '' || value === null || value === undefined) return false;
   const num = typeof value === 'string' ? parseFloat(value) : value;
   return !isNaN(num) && num > 0;
 };
@@ -59,7 +86,9 @@ export const validateEmail = (email: string): boolean => {
 };
 
 export const validateCardholderName = (name: string): boolean => {
-  return name.trim().length >= 2 && /^[a-zA-Z\s]*$/.test(name);
+  const trimmed = name.trim();
+  // At least 2 characters, can contain letters, numbers, spaces, and hyphens
+  return trimmed.length >= 2 && /^[a-zA-Z0-9\s\-]*$/.test(trimmed);
 };
 
 export const validateLoanAmount = (amount: number | string): boolean => {
