@@ -9,6 +9,8 @@ export interface Card {
   creditLimit: number;
   currentBalance: number;
   color: string;
+  billingCycleDay: number;
+  paymentDueDays: number;
   createdAt: number;
 }
 

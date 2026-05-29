@@ -51,6 +51,8 @@ type CardRow = {
   credit_limit: number
   current_balance: number
   color: string
+  billing_cycle_day: number
+  payment_due_days: number
   created_at: number
 }
 
@@ -120,6 +122,8 @@ const mapCardRowToCard = (row: CardRow): Card => ({
   creditLimit: Number(row.credit_limit),
   currentBalance: Number(row.current_balance),
   color: row.color,
+  billingCycleDay: row.billing_cycle_day,
+  paymentDueDays: row.payment_due_days,
   createdAt: row.created_at,
 })
 
@@ -481,6 +485,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       credit_limit: newCard.creditLimit,
       current_balance: newCard.currentBalance,
       color: newCard.color,
+      billing_cycle_day: newCard.billingCycleDay,
+      payment_due_days: newCard.paymentDueDays,
       created_at: newCard.createdAt,
     }
 
@@ -510,6 +516,8 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         credit_limit: updatedCard.creditLimit,
         current_balance: updatedCard.currentBalance,
         color: updatedCard.color,
+        billing_cycle_day: updatedCard.billingCycleDay,
+        payment_due_days: updatedCard.paymentDueDays,
       })
       .eq('id', id)
       .eq('user_id', user.id)

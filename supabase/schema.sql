@@ -1,4 +1,7 @@
 -- Run this in the Supabase SQL editor
+-- Note: If you already have the cards table, run the migration below:
+-- ALTER TABLE public.cards ADD COLUMN IF NOT EXISTS billing_cycle_day integer NOT NULL DEFAULT 1;
+-- ALTER TABLE public.cards ADD COLUMN IF NOT EXISTS payment_due_days integer NOT NULL DEFAULT 20;
 
 create table if not exists public.cards (
   id text primary key,
@@ -12,6 +15,8 @@ create table if not exists public.cards (
   credit_limit numeric not null,
   current_balance numeric not null default 0,
   color text not null,
+  billing_cycle_day integer not null default 1,
+  payment_due_days integer not null default 20,
   created_at bigint not null
 );
 

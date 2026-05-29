@@ -7,10 +7,20 @@ import { Button } from '@/components/ui/button';
 import { Plus, Trash2 } from 'lucide-react';
 import { formatCurrency, formatDate } from '@/lib/utils/formatting';
 import AddLoanModal from './AddLoanModal';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 export default function LoansPage() {
   const { data, deleteLoan } = useData();
   const [showAddLoanModal, setShowAddLoanModal] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   return (
     <div className="p-4 md:p-6 space-y-6">
@@ -48,7 +58,7 @@ export default function LoansPage() {
                     <p className="text-xs text-muted-foreground mt-1">Created: {formatDate(loan.createdAt)}</p>
                   </div>
                   <button
-                    onClick={() => deleteLoan(loan.id)}
+                    onClick={() => setDeleteConfirmId(loan.id)}
                     className="p-2 hover:bg-red-100 dark:hover:bg-red-900/20 rounded transition-colors"
                   >
                     <Trash2 size={16} className="text-red-500" />
@@ -107,6 +117,38 @@ export default function LoansPage() {
       )}
 
       <AddLoanModal open={showAddLoanModal} onOpenChange={setShowAddLoanModal} />
+
+      {/* Delete Confirmation Dialog */}
+      {deleteConfirmId && (
+        <AlertDialog open={true} onOpenChange={(open) => !open && setDeleteConfirmId(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Delete Loan?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to delete <strong>{data.loans.find(l => l.id === deleteConfirmId)?.name}</strong>? 
+                This action will also delete all EMIs (monthly payments) associated with this loan and cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <div className="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded p-3 mt-2">
+              <p className="text-sm text-yellow-800 dark:text-yellow-200">
+                ⚠️ Deleting a loan will permanently remove all its EMI records. Use this when closing or pre-closing a loan.
+              </p>
+            </div>
+            <div className="flex justify-end gap-3 mt-4">
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={() => {
+                  deleteLoan(deleteConfirmId);
+                  setDeleteConfirmId(null);
+                }}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                Delete Loan
+              </AlertDialogAction>
+            </div>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
     </div>
   );
 }

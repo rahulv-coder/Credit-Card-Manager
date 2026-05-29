@@ -29,22 +29,27 @@ import {
   validateAmount,
 } from '@/lib/utils/validation';
 
+import type { Card } from '@/lib/types';
+
 interface AddCardModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialCard?: Card | null;
 }
 
-export default function AddCardModal({ open, onOpenChange }: AddCardModalProps) {
-  const { addCard } = useData();
+export default function AddCardModal({ open, onOpenChange, initialCard = null }: AddCardModalProps) {
+  const { addCard, updateCard } = useData();
   const getInitialFormData = () => ({
-    name: '',
-    cardNumber: '',
-    cardHolder: '',
-    expiryDate: '',
-    issuer: '',
-    customBankName: '',
-    creditLimit: '',
-    color: CARD_COLORS[0],
+    name: initialCard ? initialCard.name : '',
+    cardNumber: initialCard ? initialCard.cardNumber : '',
+    cardHolder: initialCard ? initialCard.cardHolder : '',
+    expiryDate: initialCard ? initialCard.expiryDate : '',
+    issuer: initialCard ? initialCard.issuer : '',
+    customBankName: initialCard ? initialCard.customBankName ?? '' : '',
+    creditLimit: initialCard ? String(initialCard.creditLimit) : '',
+    billingCycleDay: initialCard ? String(initialCard.billingCycleDay) : '1',
+    paymentDueDays: initialCard ? String(initialCard.paymentDueDays) : '20',
+    color: initialCard ? initialCard.color : CARD_COLORS[0],
   });
 
   const [formData, setFormData] = useState(getInitialFormData);
@@ -62,6 +67,13 @@ export default function AddCardModal({ open, onOpenChange }: AddCardModalProps) 
     }
     onOpenChange(nextOpen);
   };
+
+  React.useEffect(() => {
+    // when initialCard or open changes, reset form to reflect initialCard
+    setFormData(getInitialFormData());
+    setErrors({});
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialCard, open]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -94,6 +106,16 @@ export default function AddCardModal({ open, onOpenChange }: AddCardModalProps) 
       newErrors.creditLimit = 'Credit limit must be a positive number';
     }
 
+    const billingDay = parseInt(formData.billingCycleDay);
+    if (isNaN(billingDay) || billingDay < 1 || billingDay > 31) {
+      newErrors.billingCycleDay = 'Billing cycle day must be between 1 and 31';
+    }
+
+    const paymentDays = parseInt(formData.paymentDueDays);
+    if (isNaN(paymentDays) || paymentDays < 1 || paymentDays > 60) {
+      newErrors.paymentDueDays = 'Payment due days must be between 1 and 60';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -123,7 +145,7 @@ export default function AddCardModal({ open, onOpenChange }: AddCardModalProps) 
       return;
     }
 
-    await addCard({
+    const payload = {
       name: formData.name,
       cardNumber: formData.cardNumber,
       cardHolder: formData.cardHolder,
@@ -131,9 +153,17 @@ export default function AddCardModal({ open, onOpenChange }: AddCardModalProps) 
       issuer: formData.issuer === 'Other' ? 'Other' : formData.issuer,
       customBankName: formData.issuer === 'Other' ? formData.customBankName : undefined,
       creditLimit: parseInt(formData.creditLimit),
-      currentBalance: 0,
+      currentBalance: initialCard ? initialCard.currentBalance : 0,
       color: formData.color,
-    });
+      billingCycleDay: parseInt(formData.billingCycleDay),
+      paymentDueDays: parseInt(formData.paymentDueDays),
+    };
+
+    if (initialCard) {
+      await updateCard(initialCard.id, payload);
+    } else {
+      await addCard(payload);
+    }
 
     handleOpenChange(false);
   };
@@ -169,6 +199,7 @@ export default function AddCardModal({ open, onOpenChange }: AddCardModalProps) 
               maxLength={19}
               value={formData.cardNumber}
               onChange={handleCardNumberChange}
+              disabled={!!initialCard}
               className={`tracking-[0.5em] ${errors.cardNumber ? 'border-destructive' : ''}`}
             />
             {errors.cardNumber ? (
@@ -202,6 +233,7 @@ export default function AddCardModal({ open, onOpenChange }: AddCardModalProps) 
               maxLength={5}
               value={formData.expiryDate}
               onChange={handleExpiryDateChange}
+              disabled={!!initialCard}
               className={errors.expiryDate ? 'border-destructive' : ''}
             />
             {errors.expiryDate ? (
@@ -217,6 +249,7 @@ export default function AddCardModal({ open, onOpenChange }: AddCardModalProps) 
             <Select
               value={formData.issuer}
               onValueChange={(value) => {
+                if (initialCard) return; // don't allow changing issuer when editing
                 setFormData({ ...formData, issuer: value, customBankName: '' });
                 if (errors.issuer) setErrors({ ...errors, issuer: '' });
               }}
@@ -272,6 +305,56 @@ export default function AddCardModal({ open, onOpenChange }: AddCardModalProps) 
               className={errors.creditLimit ? 'border-destructive' : ''}
             />
             {errors.creditLimit && <p className="text-xs text-destructive mt-1">{errors.creditLimit}</p>}
+          </div>
+
+          {/* Billing Cycle Day */}
+          <div className="space-y-2">
+            <Label htmlFor="billingCycleDay">Billing Cycle Day *</Label>
+            <Input
+              id="billingCycleDay"
+              type="number"
+              min="1"
+              max="31"
+              placeholder="1"
+              value={formData.billingCycleDay}
+              onChange={(e) => {
+                setFormData({ ...formData, billingCycleDay: e.target.value });
+                if (errors.billingCycleDay) {
+                  setErrors({ ...errors, billingCycleDay: '' });
+                }
+              }}
+              className={errors.billingCycleDay ? 'border-destructive' : ''}
+            />
+            {errors.billingCycleDay ? (
+              <p className="text-xs text-destructive mt-1">{errors.billingCycleDay}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-1">Day of month (1-31) when your billing cycle starts</p>
+            )}
+          </div>
+
+          {/* Due Payment Balance */}
+          <div className="space-y-2">
+            <Label htmlFor="paymentDueDays">Payment Due Days *</Label>
+            <Input
+              id="paymentDueDays"
+              type="number"
+              min="1"
+              max="60"
+              placeholder="20"
+              value={formData.paymentDueDays}
+              onChange={(e) => {
+                setFormData({ ...formData, paymentDueDays: e.target.value });
+                if (errors.paymentDueDays) {
+                  setErrors({ ...errors, paymentDueDays: '' });
+                }
+              }}
+              className={errors.paymentDueDays ? 'border-destructive' : ''}
+            />
+            {errors.paymentDueDays ? (
+              <p className="text-xs text-destructive mt-1">{errors.paymentDueDays}</p>
+            ) : (
+              <p className="text-xs text-muted-foreground mt-1">Number of days from billing cycle to pay your bill (1-60)</p>
+            )}
           </div>
 
           {/* Card Color */}

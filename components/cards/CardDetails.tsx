@@ -6,19 +6,21 @@ import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { calculateCardBalance } from '@/lib/utils/calculations';
 import { formatCurrency, formatDate, getCategoryIcon } from '@/lib/utils/formatting';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Edit2 } from 'lucide-react';
 import { useData } from '@/lib/context/DataContext';
 
 interface CardDetailsProps {
   card: CardType;
   transactions: Transaction[];
   onAddTransaction: () => void;
+  onEditCard?: () => void;
 }
 
 export default function CardDetails({
   card,
   transactions,
   onAddTransaction,
+  onEditCard,
 }: CardDetailsProps) {
   const { deleteTransaction } = useData();
   const balance = calculateCardBalance(card.id, transactions);
@@ -29,7 +31,15 @@ export default function CardDetails({
     <div className="space-y-6">
       {/* Balance and Limit */}
       <Card className="p-6 border border-border shadow-sm">
-        <h3 className="text-lg font-semibold text-foreground mb-6">Card Summary</h3>
+        <div className="flex items-start justify-between mb-6">
+          <h3 className="text-lg font-semibold text-foreground">Card Summary</h3>
+          {onEditCard && (
+            <Button size="sm" variant="outline" onClick={onEditCard} className="gap-2">
+              <Edit2 size={16} />
+              <span className="hidden sm:inline">Edit Card</span>
+            </Button>
+          )}
+        </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           <div>
             <p className="text-xs font-medium text-muted-foreground mb-2">Credit Limit</p>
@@ -58,6 +68,19 @@ export default function CardDetails({
               }`}
               style={{ width: `${Math.min(utilizationPercent, 100)}%` }}
             />
+          </div>
+        </div>
+
+        {/* Billing Cycle Info */}
+        <div className="mt-6 pt-6 border-t border-border grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-2">Billing Cycle Day</p>
+            <p className="text-lg font-semibold text-foreground">{card.billingCycleDay}th of every month</p>
+          </div>
+          <div>
+            <p className="text-xs font-medium text-muted-foreground mb-2">Payment Due</p>
+            <p className="text-lg font-semibold text-orange-500">{card.paymentDueDays} days after billing cycle</p>
+            <p className="text-xs text-muted-foreground mt-1">Payment deadline: {card.billingCycleDay}th + {card.paymentDueDays} days</p>
           </div>
         </div>
       </Card>
