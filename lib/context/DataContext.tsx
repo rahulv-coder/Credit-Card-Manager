@@ -4,6 +4,7 @@ import React, { createContext, useContext, useEffect, useState, ReactNode } from
 import type { AuthChangeEvent, AuthError, Session, User } from '@supabase/supabase-js'
 import { getSupabaseBrowserClient } from '@/lib/supabase/client'
 import { Card, Transaction, Loan, EMI, FinancialData, UserProfile } from '@/lib/types'
+import { Skeleton } from '@/components/ui/skeleton'
 
 interface SignUpProfileInput {
   firstName: string
@@ -25,7 +26,7 @@ interface DataContextType {
   signOut: () => Promise<{ error: AuthError | null }>
   importData: (imported: FinancialData) => Promise<boolean>
   clearAllData: () => Promise<boolean>
-  addCard: (card: Omit<Card, 'id' | 'createdAt'>) => Promise<void>
+  addCard: (card: Omit<Card, 'id' | 'createdAt'>) => Promise<{ success: boolean; error?: string }>
   updateCard: (id: string, card: Omit<Card, 'id' | 'createdAt'>) => Promise<void>
   deleteCard: (id: string) => Promise<void>
   addTransaction: (transaction: Omit<Transaction, 'id'>) => Promise<void>
@@ -464,8 +465,12 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     return true
   }
 
-  const addCard = async (card: Omit<Card, 'id' | 'createdAt'>) => {
-    if (!supabase || !user) return
+  const addCard = async (
+    card: Omit<Card, 'id' | 'createdAt'>
+  ): Promise<{ success: boolean; error?: string }> => {
+    if (!supabase || !user) {
+      return { success: false, error: 'Supabase client or user is not available.' }
+    }
 
     const newCard: Card = {
       ...card,
@@ -493,7 +498,23 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
     const { error } = await supabase.from('cards').insert(payload)
     if (!error) {
       setData((prev) => ({ ...prev, cards: [newCard, ...prev.cards] }))
+      return { success: true }
     }
+
+    if (error.message?.includes('billing_cycle_day') || error.message?.includes('payment_due_days')) {
+      const fallbackPayload = { ...payload } as Record<string, any>
+      delete fallbackPayload.billing_cycle_day
+      delete fallbackPayload.payment_due_days
+
+      const { error: fallbackError } = await supabase.from('cards').insert(fallbackPayload)
+      if (!fallbackError) {
+        setData((prev) => ({ ...prev, cards: [newCard, ...prev.cards] }))
+        return { success: true }
+      }
+      return { success: false, error: fallbackError.message || 'Unable to add card' }
+    }
+
+    return { success: false, error: error.message || 'Unable to add card' }
   }
 
   const updateCard = async (id: string, card: Omit<Card, 'id' | 'createdAt'>) => {
@@ -504,7 +525,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
 
     const updatedCard: Card = { ...card, id, createdAt: existing.createdAt }
 
-    const { error } = await supabase
+    let { error } = await supabase
       .from('cards')
       .update({
         name: updatedCard.name,
@@ -521,6 +542,26 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       })
       .eq('id', id)
       .eq('user_id', user.id)
+
+    if (error && (error.message?.includes('billing_cycle_day') || error.message?.includes('payment_due_days'))) {
+      const result = await supabase
+        .from('cards')
+        .update({
+          name: updatedCard.name,
+          card_number: updatedCard.cardNumber,
+          card_holder: updatedCard.cardHolder,
+          expiry_date: updatedCard.expiryDate,
+          issuer: updatedCard.issuer,
+          custom_bank_name: updatedCard.customBankName ?? null,
+          credit_limit: updatedCard.creditLimit,
+          current_balance: updatedCard.currentBalance,
+          color: updatedCard.color,
+        })
+        .eq('id', id)
+        .eq('user_id', user.id)
+
+      error = result.error
+    }
 
     if (!error) {
       setData((prev) => ({
@@ -753,7 +794,27 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
   }
 
   if (authLoading || dataLoading) {
-    return <div className="flex items-center justify-center min-h-screen">Loading...</div>
+    return (
+      <div className="min-h-screen bg-background px-4 py-10">
+        <div className="mx-auto max-w-6xl space-y-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <Skeleton className="h-10 w-48" />
+            <Skeleton className="h-10 w-32" />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+            <Skeleton className="h-44" />
+            <Skeleton className="h-44" />
+            <Skeleton className="h-44" />
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-2">
+            <Skeleton className="h-72" />
+            <Skeleton className="h-72" />
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (

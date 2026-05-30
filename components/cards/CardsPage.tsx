@@ -32,6 +32,12 @@ export default function CardsPage() {
   const [editingCard, setEditingCard] = useState<any | null>(null);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  React.useEffect(() => {
+    if (data.cards.length > 0 && !selectedCardId) {
+      setSelectedCardId(data.cards[0].id);
+    }
+  }, [data.cards, selectedCardId]);
+
   const selectedCard = data.cards.find(c => c.id === selectedCardId);
 
   const handleDeleteCard = async () => {

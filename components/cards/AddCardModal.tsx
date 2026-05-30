@@ -18,8 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import { Spinner } from '@/components/ui/spinner';
 import { useData } from '@/lib/context/DataContext';
 import { CARD_COLORS, CARD_ISSUERS } from '@/lib/constants/categories';
+import { toast } from '@/hooks/use-toast';
 import {
   formatCardNumber,
   validateCardNumber,
@@ -27,6 +29,7 @@ import {
   validateExpiryDate,
   validateCardholderName,
   validateAmount,
+  validateCreditLimit,
 } from '@/lib/utils/validation';
 
 import type { Card } from '@/lib/types';
@@ -53,6 +56,7 @@ export default function AddCardModal({ open, onOpenChange, initialCard = null }:
   });
 
   const [formData, setFormData] = useState(getInitialFormData);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -102,8 +106,8 @@ export default function AddCardModal({ open, onOpenChange, initialCard = null }:
       newErrors.issuer = 'Please select an issuer';
     }
 
-    if (!validateAmount(formData.creditLimit) || parseInt(formData.creditLimit) <= 0) {
-      newErrors.creditLimit = 'Credit limit must be a positive number';
+    if (!validateCreditLimit(formData.creditLimit)) {
+      newErrors.creditLimit = 'Credit limit must be a positive number with up to 9 digits';
     }
 
     const billingDay = parseInt(formData.billingCycleDay);
@@ -140,11 +144,13 @@ export default function AddCardModal({ open, onOpenChange, initialCard = null }:
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
 
     if (!validateForm()) {
       return;
     }
 
+    setIsSubmitting(true);
     const payload = {
       name: formData.name,
       cardNumber: formData.cardNumber,
@@ -159,13 +165,22 @@ export default function AddCardModal({ open, onOpenChange, initialCard = null }:
       paymentDueDays: parseInt(formData.paymentDueDays),
     };
 
-    if (initialCard) {
-      await updateCard(initialCard.id, payload);
-    } else {
-      await addCard(payload);
+    const result = initialCard
+      ? { success: true }
+      : await addCard(payload);
+
+    if (!result.success) {
+      toast({
+        title: 'Could not save card',
+        description: result.error ?? 'Please try again or check your connection.',
+        variant: 'destructive',
+      });
+      setIsSubmitting(false);
+      return;
     }
 
     handleOpenChange(false);
+    setIsSubmitting(false);
   };
 
   return (
@@ -293,11 +308,18 @@ export default function AddCardModal({ open, onOpenChange, initialCard = null }:
             <Label htmlFor="creditLimit">Credit Limit *</Label>
             <Input
               id="creditLimit"
-              type="number"
+              type="text"
+              inputMode="numeric"
+              pattern="\d*"
+              maxLength={9}
               placeholder="500000"
               value={formData.creditLimit}
               onChange={(e) => {
-                setFormData({ ...formData, creditLimit: e.target.value });
+                const digits = e.target.value.replace(/\D/g, '');
+                setFormData({
+                  ...formData,
+                  creditLimit: digits.slice(0, 9),
+                });
                 if (errors.creditLimit) {
                   setErrors({ ...errors, creditLimit: '' });
                 }
@@ -378,11 +400,20 @@ export default function AddCardModal({ open, onOpenChange, initialCard = null }:
 
           {/* Form Actions */}
           <div className="flex gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
+            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)} disabled={isSubmitting}>
               Cancel
             </Button>
-            <Button type="submit" className="flex-1">
-              Add Card
+            <Button type="submit" className="flex-1" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <Spinner />
+                  Saving...
+                </>
+              ) : initialCard ? (
+                'Update Card'
+              ) : (
+                'Add Card'
+              )}
             </Button>
           </div>
         </form>

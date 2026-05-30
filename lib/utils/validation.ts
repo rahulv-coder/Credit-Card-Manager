@@ -79,6 +79,17 @@ export const validateAmount = (value: number | string): boolean => {
   return !isNaN(num) && num > 0;
 };
 
+export const validateCreditLimit = (value: number | string): boolean => {
+  if (value === '' || value === null || value === undefined) return false;
+
+  const stringValue = typeof value === 'string' ? value : String(value);
+  const digits = stringValue.replace(/\D/g, '');
+  if (!digits) return false;
+
+  const num = parseInt(digits, 10);
+  return digits.length <= 9 && !isNaN(num) && num > 0;
+};
+
 /** Field validation helpers */
 export const validateEmail = (email: string): boolean => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
