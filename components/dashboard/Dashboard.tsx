@@ -15,6 +15,8 @@ import RecentTransactions from './RecentTransactions';
 import UpcomingEMIs from './UpcomingEMIs';
 import QuickActions from './QuickActions';
 import SpendingChart from './SpendingChart';
+import SpendingByCategory from './SpendingByCategory';
+import CardBillsDue from './CardBillsDue';
 
 export default function Dashboard() {
   const { data, profile, user } = useData();
@@ -58,6 +60,12 @@ export default function Dashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <RecentTransactions transactions={recentTransactions} cards={data.cards} />
         <UpcomingEMIs emis={upcomingEMIs} loans={data.loans} />
+      </div>
+
+      {/* Spending by Category + Card Bills Due */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <SpendingByCategory transactions={data.transactions} />
+        <CardBillsDue cards={data.cards} />
       </div>
     </div>
   );

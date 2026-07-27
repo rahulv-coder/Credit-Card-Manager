@@ -23,35 +23,34 @@ import {
 interface AddLoanModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  editLoan?: import('@/lib/types').Loan;
 }
 
-export default function AddLoanModal({ open, onOpenChange }: AddLoanModalProps) {
-  const { addLoan, addEMI } = useData();
+export default function AddLoanModal({ open, onOpenChange, editLoan }: AddLoanModalProps) {
+  const { addLoan, addEMI, updateLoan } = useData();
+  const isEdit = !!editLoan;
+
   const getInitialFormData = () => ({
-    name: '',
-    principal: '',
-    interestRate: '',
-    startDate: new Date().toISOString().split('T')[0],
-    tenureMonths: 60,
+    name: editLoan?.name || '',
+    principal: editLoan ? String(editLoan.principal) : '',
+    interestRate: editLoan ? String(editLoan.interestRate) : '',
+    startDate: editLoan
+      ? new Date(editLoan.startDate).toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0],
+    tenureMonths: editLoan?.tenureMonths || 60,
   });
 
   const [formData, setFormData] = useState(getInitialFormData);
-
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [emiAmount, setEmiAmount] = useState(0);
 
-  const resetForm = () => {
+  // Re-sync when editLoan or open changes
+  React.useEffect(() => {
     setFormData(getInitialFormData());
     setErrors({});
     setEmiAmount(0);
-  };
-
-  const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) {
-      resetForm();
-    }
-    onOpenChange(nextOpen);
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editLoan, open]);
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -76,23 +75,11 @@ export default function AddLoanModal({ open, onOpenChange }: AddLoanModalProps) 
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleOpenChange = (nextOpen: boolean) => {
+    onOpenChange(nextOpen);
+  };
+
   const validateEmiInputs = (): boolean => {
-    const newErrors = { ...errors };
-
-    if (!validateLoanAmount(formData.principal)) {
-      newErrors.principal = 'Principal amount must be a positive number';
-    }
-
-    if (!validateInterestRate(formData.interestRate)) {
-      newErrors.interestRate = 'Interest rate must be between 0 and 50';
-    }
-
-    if (!validateTenure(formData.tenureMonths)) {
-      newErrors.tenureMonths = 'Tenure must be between 1 and 360 months';
-    }
-
-    setErrors(newErrors);
-
     return (
       validateLoanAmount(formData.principal) &&
       validateInterestRate(formData.interestRate) &&
@@ -111,16 +98,13 @@ export default function AddLoanModal({ open, onOpenChange }: AddLoanModalProps) 
 
   const handleCalculateEMI = () => {
     if (!validateEmiInputs()) {
-      setEmiAmount(0);
       return;
     }
-
     const emi = calculateEMI(
       parseFloat(formData.principal),
       parseFloat(formData.interestRate),
       formData.tenureMonths
     );
-
     setEmiAmount(emi);
   };
 
@@ -136,6 +120,20 @@ export default function AddLoanModal({ open, onOpenChange }: AddLoanModalProps) 
     const durationMonths = formData.tenureMonths;
     const endDate = new Date(startDate);
     endDate.setMonth(endDate.getMonth() + durationMonths);
+
+    if (isEdit && editLoan) {
+      await updateLoan(editLoan.id, {
+        name: formData.name,
+        principal: parseFloat(formData.principal),
+        currentAmount: editLoan.currentAmount,
+        interestRate: parseFloat(formData.interestRate),
+        tenureMonths: durationMonths,
+        startDate,
+        endDate: endDate.getTime(),
+      });
+      handleOpenChange(false);
+      return;
+    }
 
     const loanId = await addLoan({
       name: formData.name,
@@ -173,8 +171,8 @@ export default function AddLoanModal({ open, onOpenChange }: AddLoanModalProps) 
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add New Loan</DialogTitle>
-          <DialogDescription>Create a new loan and auto-generate EMI schedule. All fields are required.</DialogDescription>
+          <DialogTitle>{isEdit ? 'Edit Loan' : 'Add New Loan'}</DialogTitle>
+          <DialogDescription>{isEdit ? 'Update loan details. EMI schedule will not change.' : 'Create a new loan and auto-generate EMI schedule.'}</DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -307,7 +305,7 @@ export default function AddLoanModal({ open, onOpenChange }: AddLoanModalProps) 
               Cancel
             </Button>
             <Button type="submit" className="flex-1" disabled={!isFormValid}>
-              Add Loan
+              {isEdit ? 'Save Changes' : 'Add Loan'}
             </Button>
           </div>
         </form>

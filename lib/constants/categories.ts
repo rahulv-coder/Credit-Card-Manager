@@ -1,4 +1,4 @@
-export const TRANSACTION_CATEGORIES = [
+export const DEBIT_CATEGORIES = [
   'Food',
   'Travel',
   'Shopping',
@@ -8,8 +8,22 @@ export const TRANSACTION_CATEGORIES = [
   'Education',
   'Utilities',
   'Groceries',
+  'EMI Payment',
+  'Fuel',
+  'Subscriptions',
   'Other',
 ];
+
+export const CREDIT_CATEGORIES = [
+  'Income',
+  'Salary',
+  'Refund',
+  'Cashback',
+  'Reward Redemption',
+  'Other',
+];
+
+export const TRANSACTION_CATEGORIES = [...DEBIT_CATEGORIES, ...CREDIT_CATEGORIES];
 
 export const CARD_COLORS = [
   '#3b82f6', // Blue

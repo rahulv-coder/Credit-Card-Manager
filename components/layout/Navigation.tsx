@@ -9,6 +9,7 @@ import {
   Banknote,
   Calendar,
   Settings,
+  BarChart2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -36,6 +37,11 @@ const navItems = [
     label: 'EMIs',
     href: '/emis',
     icon: Calendar,
+  },
+  {
+    label: 'Analytics',
+    href: '/analytics',
+    icon: BarChart2,
   },
   {
     label: 'Settings',

@@ -1,6 +1,6 @@
-'use client';
+﻿'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -19,117 +19,128 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useData } from '@/lib/context/DataContext';
-import { Card } from '@/lib/types';
-import { TRANSACTION_CATEGORIES } from '@/lib/constants/categories';
+import { Transaction, Card } from '@/lib/types';
+import { DEBIT_CATEGORIES, CREDIT_CATEGORIES } from '@/lib/constants/categories';
 import { validateAmount } from '@/lib/utils/validation';
+import { ArrowDownCircle, ArrowUpCircle } from 'lucide-react';
 
 interface AddTransactionModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   cardId?: string;
+  editTransaction?: Transaction;
 }
 
 export default function AddTransactionModal({
   open,
   onOpenChange,
   cardId: defaultCardId,
+  editTransaction,
 }: AddTransactionModalProps) {
-  const { cards, addTransaction } = useData();
+  const { cards, addTransaction, updateTransaction } = useData();
+  const isEdit = !!editTransaction;
+
   const getInitialFormData = () => ({
-    cardId: defaultCardId || '',
-    amount: '',
-    description: '',
-    category: 'Food',
-    date: new Date().toISOString().split('T')[0],
+    cardId: editTransaction?.cardId || defaultCardId || '',
+    amount: editTransaction ? String(editTransaction.amount) : '',
+    description: editTransaction?.description || '',
+    category: editTransaction?.category || 'Food',
+    date: editTransaction
+      ? new Date(editTransaction.date).toISOString().split('T')[0]
+      : new Date().toISOString().split('T')[0],
+    type: (editTransaction?.type || 'debit') as 'debit' | 'credit',
   });
 
   const [formData, setFormData] = useState(getInitialFormData);
-
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const resetForm = () => {
+  useEffect(() => {
     setFormData(getInitialFormData());
     setErrors({});
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editTransaction, open]);
+
+  const categories = formData.type === 'debit' ? DEBIT_CATEGORIES : CREDIT_CATEGORIES;
 
   const handleOpenChange = (nextOpen: boolean) => {
-    if (!nextOpen) {
-      resetForm();
-    }
+    if (!nextOpen) { setFormData(getInitialFormData()); setErrors({}); }
     onOpenChange(nextOpen);
   };
 
-  const selectedCard = useMemo(() => {
-    return cards.find((card: Card) => card.id === formData.cardId);
-  }, [formData.cardId, cards]);
+  const selectedCard = useMemo(
+    () => cards.find((c: Card) => c.id === formData.cardId),
+    [formData.cardId, cards]
+  );
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
-
-    if (!formData.cardId) {
-      newErrors.cardId = 'Please select a card';
-    }
-
-    if (!validateAmount(formData.amount)) {
-      newErrors.amount = 'Amount must be a positive number';
-    }
-
-    if (!formData.description.trim()) {
-      newErrors.description = 'Description is required';
-    }
-
+    if (!formData.cardId) newErrors.cardId = 'Please select a card';
+    if (!validateAmount(formData.amount)) newErrors.amount = 'Amount must be a positive number';
+    if (!formData.description.trim()) newErrors.description = 'Description is required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
-  const isFormValid = useMemo(() => {
-    return (
-      formData.cardId !== '' &&
-      validateAmount(formData.amount) &&
-      formData.description.trim() !== ''
-    );
-  }, [formData]);
+  const isFormValid = useMemo(
+    () => formData.cardId !== '' && validateAmount(formData.amount) && formData.description.trim() !== '',
+    [formData]
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
-    await addTransaction({
+    if (!validateForm()) return;
+    const payload = {
       cardId: formData.cardId,
       amount: parseFloat(formData.amount),
       description: formData.description,
       category: formData.category,
       date: new Date(formData.date).getTime(),
-      type: 'debit',
-    });
-
+      type: formData.type,
+    };
+    if (isEdit && editTransaction) {
+      await updateTransaction(editTransaction.id, payload);
+    } else {
+      await addTransaction(payload);
+    }
     handleOpenChange(false);
   };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent>
+      <DialogContent className="max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>Add Transaction</DialogTitle>
-          <DialogDescription>Record a new expense. All fields are required.</DialogDescription>
+          <DialogTitle>{isEdit ? 'Edit Transaction' : 'Add Transaction'}</DialogTitle>
+          <DialogDescription>
+            {isEdit ? 'Update the transaction details.' : 'Record a new transaction.'}
+          </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Which Card I Spent */}
+          {/* Debit / Credit toggle */}
           <div className="space-y-2">
-            <Label htmlFor="cardId">Which Card I Spent *</Label>
-            <Select
-              value={formData.cardId}
-              onValueChange={(value) => {
-                setFormData({ ...formData, cardId: value });
-                if (errors.cardId) {
-                  setErrors({ ...errors, cardId: '' });
-                }
-              }}
-            >
+            <Label>Transaction Type</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <button type="button"
+                onClick={() => setFormData({ ...formData, type: 'debit', category: 'Food' })}
+                className={`flex items-center justify-center gap-2 py-2 rounded-lg border text-sm font-medium transition-all ${
+                  formData.type === 'debit' ? 'bg-red-500 border-red-500 text-white' : 'border-border text-muted-foreground hover:border-red-400'
+                }`}>
+                <ArrowDownCircle size={15} /> Debit / Expense
+              </button>
+              <button type="button"
+                onClick={() => setFormData({ ...formData, type: 'credit', category: 'Income' })}
+                className={`flex items-center justify-center gap-2 py-2 rounded-lg border text-sm font-medium transition-all ${
+                  formData.type === 'credit' ? 'bg-green-500 border-green-500 text-white' : 'border-border text-muted-foreground hover:border-green-400'
+                }`}>
+                <ArrowUpCircle size={15} /> Credit / Income
+              </button>
+            </div>
+          </div>
+
+          {/* Card selector */}
+          <div className="space-y-2">
+            <Label>Card *</Label>
+            <Select value={formData.cardId} onValueChange={(v) => setFormData({ ...formData, cardId: v })}>
               <SelectTrigger className={errors.cardId ? 'border-destructive' : ''}>
                 <SelectValue placeholder="Select a card" />
               </SelectTrigger>
@@ -141,96 +152,63 @@ export default function AddTransactionModal({
                 ))}
               </SelectContent>
             </Select>
-            {errors.cardId && <p className="text-xs text-destructive mt-1">{errors.cardId}</p>}
+            {errors.cardId && <p className="text-xs text-destructive">{errors.cardId}</p>}
           </div>
 
-          {/* Credit Limit Display */}
           {selectedCard && (
-            <div className="bg-secondary rounded-lg p-3">
-              <div className="flex justify-between items-center">
-                <span className="text-sm text-muted-foreground">Available Credit Limit</span>
-                <span className="text-lg font-semibold text-foreground">₹{selectedCard.creditLimit.toLocaleString('en-IN')}</span>
+            <div className="bg-secondary rounded-lg p-3 text-sm space-y-1">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Credit Limit</span>
+                <span className="font-semibold">â‚¹{selectedCard.creditLimit.toLocaleString('en-IN')}</span>
               </div>
-              <div className="flex justify-between items-center mt-2">
-                <span className="text-sm text-muted-foreground">Current Balance</span>
-                <span className="text-sm font-medium">₹{selectedCard.currentBalance.toLocaleString('en-IN')}</span>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Current Balance</span>
+                <span className="font-medium">â‚¹{selectedCard.currentBalance.toLocaleString('en-IN')}</span>
               </div>
             </div>
           )}
 
           {/* Amount */}
           <div className="space-y-2">
-            <Label htmlFor="amount">Amount *</Label>
-            <Input
-              id="amount"
-              type="number"
-              step="0.01"
-              placeholder="1500"
-              value={formData.amount}
-              onChange={(e) => {
-                setFormData({ ...formData, amount: e.target.value });
-                if (errors.amount) {
-                  setErrors({ ...errors, amount: '' });
-                }
-              }}
-              className={errors.amount ? 'border-destructive' : ''}
-            />
-            {errors.amount && <p className="text-xs text-destructive mt-1">{errors.amount}</p>}
+            <Label>Amount *</Label>
+            <Input type="number" step="0.01" placeholder="1500" value={formData.amount}
+              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
+              className={errors.amount ? 'border-destructive' : ''} />
+            {errors.amount && <p className="text-xs text-destructive">{errors.amount}</p>}
           </div>
 
           {/* Description */}
           <div className="space-y-2">
-            <Label htmlFor="description">Description *</Label>
-            <Input
-              id="description"
-              placeholder="e.g., Coffee at Starbucks"
+            <Label>Description *</Label>
+            <Input placeholder={formData.type === 'credit' ? 'e.g., Monthly Salary' : 'e.g., Coffee at Starbucks'}
               value={formData.description}
-              onChange={(e) => {
-                setFormData({ ...formData, description: e.target.value });
-                if (errors.description) {
-                  setErrors({ ...errors, description: '' });
-                }
-              }}
-              className={errors.description ? 'border-destructive' : ''}
-            />
-            {errors.description && <p className="text-xs text-destructive mt-1">{errors.description}</p>}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              className={errors.description ? 'border-destructive' : ''} />
+            {errors.description && <p className="text-xs text-destructive">{errors.description}</p>}
           </div>
 
           {/* Category */}
           <div className="space-y-2">
-            <Label htmlFor="category">Category</Label>
-            <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
+            <Label>Category</Label>
+            <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
               <SelectContent>
-                {TRANSACTION_CATEGORIES.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
+                {categories.map((cat) => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}
               </SelectContent>
             </Select>
           </div>
 
           {/* Date */}
           <div className="space-y-2">
-            <Label htmlFor="date">Date</Label>
-            <Input
-              id="date"
-              type="date"
-              value={formData.date}
-              onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-            />
+            <Label>Date</Label>
+            <Input type="date" value={formData.date}
+              onChange={(e) => setFormData({ ...formData, date: e.target.value })} />
           </div>
 
-          {/* Form Actions */}
-          <div className="flex gap-3 pt-4">
-            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>
-              Cancel
-            </Button>
+          <div className="flex gap-3 pt-2">
+            <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>Cancel</Button>
             <Button type="submit" className="flex-1" disabled={!isFormValid}>
-              Add Transaction
+              {isEdit ? 'Save Changes' : formData.type === 'credit' ? 'Add Credit' : 'Add Expense'}
             </Button>
           </div>
         </form>
@@ -238,3 +216,4 @@ export default function AddTransactionModal({
     </Dialog>
   );
 }
+

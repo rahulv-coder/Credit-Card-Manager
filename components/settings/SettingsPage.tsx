@@ -1,12 +1,16 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useTheme } from 'next-themes';
 import { useData } from '@/lib/context/DataContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, Trash2, Upload, Sun, Moon, Sparkles, Check } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Download, Trash2, Upload, Sun, Moon, Sparkles, Check, User, Lock } from 'lucide-react';
 import type { Card as CardType, EMI, Loan, Transaction, FinancialData } from '@/lib/types';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 type ExportCard = CardType & { transactions: Transaction[] };
 type ExportLoan = Loan & { emis: EMI[] };
@@ -105,9 +109,67 @@ const normalizeImportedData = (imported: unknown): FinancialData | null => {
 };
 
 export default function SettingsPage() {
-  const { data, importData, clearAllData } = useData();
+  const { data, importData, clearAllData, profile, updateProfile } = useData();
   const { resolvedTheme, setTheme } = useTheme();
   const [importError, setImportError] = useState('');
+
+  // Profile form
+  const [profileForm, setProfileForm] = useState({
+    firstName: profile?.firstName || '',
+    lastName: profile?.lastName || '',
+    mobile: profile?.mobile || '',
+    gender: (profile?.gender || '') as '' | 'male' | 'female',
+  });
+  const [profileMsg, setProfileMsg] = useState('');
+  const [profileLoading, setProfileLoading] = useState(false);
+
+  useEffect(() => {
+    if (profile) {
+      setProfileForm({
+        firstName: profile.firstName || '',
+        lastName: profile.lastName || '',
+        mobile: profile.mobile || '',
+        gender: (profile.gender || '') as '' | 'male' | 'female',
+      });
+    }
+  }, [profile]);
+
+  const handleSaveProfile = async () => {
+    setProfileLoading(true);
+    setProfileMsg('');
+    const updates: Record<string, string> = {};
+    if (profileForm.firstName) updates.firstName = profileForm.firstName;
+    if (profileForm.lastName) updates.lastName = profileForm.lastName;
+    if (profileForm.mobile) updates.mobile = profileForm.mobile;
+    if (profileForm.gender) updates.gender = profileForm.gender;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const result = await updateProfile(updates as any);
+    setProfileLoading(false);
+    setProfileMsg(result.error ? `Error: ${result.error}` : 'Profile saved successfully.');
+    setTimeout(() => setProfileMsg(''), 3000);
+  };
+
+  // Password change
+  const [pwForm, setPwForm] = useState({ newPassword: '', confirmPassword: '' });
+  const [pwMsg, setPwMsg] = useState('');
+  const [pwLoading, setPwLoading] = useState(false);
+
+  const handleChangePassword = async () => {
+    if (pwForm.newPassword.length < 6) { setPwMsg('Password must be at least 6 characters.'); return; }
+    if (pwForm.newPassword !== pwForm.confirmPassword) { setPwMsg('Passwords do not match.'); return; }
+    setPwLoading(true);
+    setPwMsg('');
+    const supabase = getSupabaseBrowserClient();
+    if (supabase) {
+      const { error } = await supabase.auth.updateUser({ password: pwForm.newPassword });
+      setPwMsg(error ? `Error: ${error.message}` : 'Password changed successfully.');
+    } else {
+      setPwMsg('Supabase not configured.');
+    }
+    setPwLoading(false);
+    setPwForm({ newPassword: '', confirmPassword: '' });
+    setTimeout(() => setPwMsg(''), 4000);
+  };
 
   const handleExportData = () => {
     const exportData = buildExportData(data);
@@ -167,6 +229,76 @@ export default function SettingsPage() {
         <h1 className="text-3xl font-bold text-foreground">Settings</h1>
         <p className="text-muted-foreground">Manage your application settings and data</p>
       </div>
+
+      {/* Profile */}
+      <Card className="p-6 border border-border shadow-sm">
+        <div className="flex items-center gap-2 mb-5">
+          <User size={18} className="text-primary" />
+          <h3 className="text-lg font-semibold text-foreground">Profile</h3>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label>First Name</Label>
+            <Input value={profileForm.firstName} onChange={(e) => setProfileForm({ ...profileForm, firstName: e.target.value })} placeholder="John" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Last Name</Label>
+            <Input value={profileForm.lastName} onChange={(e) => setProfileForm({ ...profileForm, lastName: e.target.value })} placeholder="Doe" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Mobile</Label>
+            <Input value={profileForm.mobile} onChange={(e) => setProfileForm({ ...profileForm, mobile: e.target.value })} placeholder="+91 9876543210" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Gender</Label>
+            <Select value={profileForm.gender} onValueChange={(v) => setProfileForm({ ...profileForm, gender: v as '' | 'male' | 'female' })}>
+              <SelectTrigger><SelectValue placeholder="Select gender" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="male">Male</SelectItem>
+                <SelectItem value="female">Female</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="flex items-center gap-4 mt-4">
+          <Button onClick={handleSaveProfile} disabled={profileLoading}>
+            {profileLoading ? 'Saving…' : 'Save Profile'}
+          </Button>
+          {profileMsg && (
+            <p className={`text-sm ${profileMsg.startsWith('Error') ? 'text-destructive' : 'text-green-500'}`}>
+              {profileMsg}
+            </p>
+          )}
+        </div>
+      </Card>
+
+      {/* Password */}
+      <Card className="p-6 border border-border shadow-sm">
+        <div className="flex items-center gap-2 mb-5">
+          <Lock size={18} className="text-primary" />
+          <h3 className="text-lg font-semibold text-foreground">Change Password</h3>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-md">
+          <div className="space-y-1.5">
+            <Label>New Password</Label>
+            <Input type="password" value={pwForm.newPassword} onChange={(e) => setPwForm({ ...pwForm, newPassword: e.target.value })} placeholder="Min 6 characters" />
+          </div>
+          <div className="space-y-1.5">
+            <Label>Confirm Password</Label>
+            <Input type="password" value={pwForm.confirmPassword} onChange={(e) => setPwForm({ ...pwForm, confirmPassword: e.target.value })} placeholder="Repeat password" />
+          </div>
+        </div>
+        <div className="flex items-center gap-4 mt-4">
+          <Button onClick={handleChangePassword} disabled={pwLoading || !pwForm.newPassword}>
+            {pwLoading ? 'Updating…' : 'Change Password'}
+          </Button>
+          {pwMsg && (
+            <p className={`text-sm ${pwMsg.startsWith('Error') ? 'text-destructive' : 'text-green-500'}`}>
+              {pwMsg}
+            </p>
+          )}
+        </div>
+      </Card>
 
       {/* Appearance */}
       <Card className="p-6 border border-border shadow-sm">

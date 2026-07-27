@@ -24,6 +24,7 @@ interface DataContextType {
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>
   signUp: (email: string, password: string, profile: SignUpProfileInput) => Promise<{ error: AuthError | null }>
   signOut: () => Promise<{ error: AuthError | null }>
+  updateProfile: (updates: { firstName?: string; lastName?: string; mobile?: string; gender?: 'male' | 'female' }) => Promise<{ error?: string }>
   importData: (imported: FinancialData) => Promise<boolean>
   clearAllData: () => Promise<boolean>
   addCard: (card: Omit<Card, 'id' | 'createdAt'>) => Promise<{ success: boolean; error?: string }>
@@ -355,6 +356,27 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
       setData(defaultData)
     }
     return { error }
+  }
+
+  const updateProfile = async (updates: { firstName?: string; lastName?: string; mobile?: string; gender?: 'male' | 'female' }) => {
+    if (!supabase || !user) return { error: 'Not authenticated' }
+
+    const now = Date.now()
+    const updatePayload: Record<string, unknown> = { updated_at: now }
+    if (updates.firstName !== undefined) updatePayload.first_name = updates.firstName
+    if (updates.lastName !== undefined) updatePayload.last_name = updates.lastName
+    if (updates.mobile !== undefined) updatePayload.mobile = updates.mobile
+    if (updates.gender !== undefined) updatePayload.gender = updates.gender
+
+    const { error } = await supabase
+      .from('user_profiles')
+      .update(updatePayload)
+      .eq('user_id', user.id)
+
+    if (!error) {
+      setProfile((prev) => prev ? { ...prev, ...updates, updatedAt: now } : prev)
+    }
+    return { error: error?.message }
   }
 
   const importData = async (imported: FinancialData): Promise<boolean> => {
@@ -830,6 +852,7 @@ export const DataProvider = ({ children }: { children: ReactNode }) => {
         signIn,
         signUp,
         signOut,
+        updateProfile,
         importData,
         clearAllData,
         addCard,
