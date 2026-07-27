@@ -29,7 +29,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
   };
 
   return (
-    <header className="border-b border-border bg-white dark:bg-card px-4 py-3 flex items-center justify-between md:px-6 sticky top-0 z-30">
+    <header className="app-header border-b border-border bg-white dark:bg-card px-4 py-3 flex items-center justify-between md:px-6 sticky top-0 z-30">
       <div className="flex items-center gap-4">
         <button
           onClick={onMenuClick}

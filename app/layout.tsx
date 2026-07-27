@@ -5,6 +5,7 @@ import './globals.css'
 import { DataProvider } from '@/lib/context/DataContext'
 import LayoutWrapper from '@/components/layout/LayoutWrapper'
 import { ThemeProvider } from '@/components/theme-provider'
+import { Toaster } from '@/components/ui/sonner'
 
 const plusJakartaSans = Plus_Jakarta_Sans({
   subsets: ['latin'],
@@ -52,10 +53,12 @@ export default function RootLayout({
           attribute="class"
           defaultTheme="system"
           enableSystem
+          themes={['light', 'dark', 'finance']}
           disableTransitionOnChange
         >
           <DataProvider>
             <LayoutWrapper>{children}</LayoutWrapper>
+            <Toaster position="top-right" richColors />
           </DataProvider>
         </ThemeProvider>
         {process.env.NODE_ENV === 'production' && <Analytics />}

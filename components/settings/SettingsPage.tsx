@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useTheme } from 'next-themes';
 import { useData } from '@/lib/context/DataContext';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Download, Trash2, Upload } from 'lucide-react';
+import { Download, Trash2, Upload, Sun, Moon, Sparkles, Check } from 'lucide-react';
 import type { Card as CardType, EMI, Loan, Transaction, FinancialData } from '@/lib/types';
 
 type ExportCard = CardType & { transactions: Transaction[] };
@@ -105,6 +106,7 @@ const normalizeImportedData = (imported: unknown): FinancialData | null => {
 
 export default function SettingsPage() {
   const { data, importData, clearAllData } = useData();
+  const { resolvedTheme, setTheme } = useTheme();
   const [importError, setImportError] = useState('');
 
   const handleExportData = () => {
@@ -166,6 +168,118 @@ export default function SettingsPage() {
         <p className="text-muted-foreground">Manage your application settings and data</p>
       </div>
 
+      {/* Appearance */}
+      <Card className="p-6 border border-border shadow-sm">
+        <h3 className="text-lg font-semibold text-foreground mb-2">Appearance</h3>
+        <p className="text-sm text-muted-foreground mb-5">Choose how the application looks</p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {/* Light */}
+          <button
+            type="button"
+            onClick={() => setTheme('light')}
+            className="relative rounded-xl border-2 p-4 text-left transition-all duration-200 hover:scale-[1.02]"
+            style={{
+              borderColor: resolvedTheme === 'light' ? '#2563eb' : 'var(--border)',
+              background: resolvedTheme === 'light' ? 'rgba(37,99,235,0.06)' : 'var(--secondary)',
+            }}
+          >
+            {resolvedTheme === 'light' && (
+              <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                <Check size={11} color="#fff" strokeWidth={3} />
+              </span>
+            )}
+            {/* Preview */}
+            <div className="rounded-lg overflow-hidden mb-3 border border-border" style={{ background: '#fafbfc', height: 64 }}>
+              <div style={{ height: 16, background: '#ffffff', borderBottom: '1px solid #e2e8f0' }} />
+              <div className="flex gap-1 p-1.5">
+                <div style={{ width: 32, height: 30, borderRadius: 6, background: '#f0f4f8' }} />
+                <div className="flex-1 space-y-1 pt-0.5">
+                  <div style={{ height: 6, borderRadius: 3, background: '#e2e8f0', width: '70%' }} />
+                  <div style={{ height: 6, borderRadius: 3, background: '#e2e8f0', width: '50%' }} />
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Sun size={15} className="text-amber-500" />
+              <span className="text-sm font-medium text-foreground">Light</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">Clean & bright</p>
+          </button>
+
+          {/* Dark */}
+          <button
+            type="button"
+            onClick={() => setTheme('dark')}
+            className="relative rounded-xl border-2 p-4 text-left transition-all duration-200 hover:scale-[1.02]"
+            style={{
+              borderColor: resolvedTheme === 'dark' ? '#3b82f6' : 'var(--border)',
+              background: resolvedTheme === 'dark' ? 'rgba(59,130,246,0.08)' : 'var(--secondary)',
+            }}
+          >
+            {resolvedTheme === 'dark' && (
+              <span className="absolute top-2 right-2 w-5 h-5 rounded-full bg-primary flex items-center justify-center">
+                <Check size={11} color="#fff" strokeWidth={3} />
+              </span>
+            )}
+            {/* Preview */}
+            <div className="rounded-lg overflow-hidden mb-3 border border-border" style={{ background: '#0f1419', height: 64 }}>
+              <div style={{ height: 16, background: '#1a2234', borderBottom: '1px solid #2d3748' }} />
+              <div className="flex gap-1 p-1.5">
+                <div style={{ width: 32, height: 30, borderRadius: 6, background: '#1f2937' }} />
+                <div className="flex-1 space-y-1 pt-0.5">
+                  <div style={{ height: 6, borderRadius: 3, background: '#374151', width: '70%' }} />
+                  <div style={{ height: 6, borderRadius: 3, background: '#374151', width: '50%' }} />
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Moon size={15} className="text-blue-400" />
+              <span className="text-sm font-medium text-foreground">Dark</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">Easy on the eyes</p>
+          </button>
+
+          {/* Finance */}
+          <button
+            type="button"
+            onClick={() => setTheme('finance')}
+            className="relative rounded-xl border-2 p-4 text-left transition-all duration-200 hover:scale-[1.02]"
+            style={{
+              borderColor: resolvedTheme === 'finance' ? '#818cf8' : 'var(--border)',
+              background: resolvedTheme === 'finance' ? 'rgba(129,140,248,0.10)' : 'var(--secondary)',
+            }}
+          >
+            {resolvedTheme === 'finance' && (
+              <span className="absolute top-2 right-2 w-5 h-5 rounded-full flex items-center justify-center"
+                style={{ background: 'linear-gradient(135deg,#818cf8,#8b5cf6)' }}>
+                <Check size={11} color="#fff" strokeWidth={3} />
+              </span>
+            )}
+            {/* Preview */}
+            <div className="rounded-lg overflow-hidden mb-3 border" style={{
+              borderColor: 'rgba(212,175,55,0.30)',
+              background: 'linear-gradient(135deg,#000000,#0a0700,#140c00)',
+              height: 64,
+            }}>
+              <div style={{ height: 16, background: 'rgba(212,175,55,0.06)', backdropFilter: 'blur(8px)', borderBottom: '1px solid rgba(212,175,55,0.15)' }} />
+              <div className="flex gap-1 p-1.5">
+                <div style={{ width: 32, height: 30, borderRadius: 6, background: 'rgba(212,175,55,0.08)', border: '1px solid rgba(212,175,55,0.15)' }} />
+                <div className="flex-1 space-y-1 pt-0.5">
+                  <div style={{ height: 6, borderRadius: 3, background: 'rgba(212,175,55,0.20)', width: '70%' }} />
+                  <div style={{ height: 6, borderRadius: 3, background: 'rgba(212,175,55,0.12)', width: '50%' }} />
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Sparkles size={15} style={{ color: '#818cf8' }} />
+              <span className="text-sm font-medium text-foreground">Finance</span>
+            </div>
+            <p className="text-xs text-muted-foreground mt-0.5">Glassmorphism glow</p>
+          </button>
+        </div>
+      </Card>
+
       {/* Data Management */}
       <Card className="p-6 border border-border shadow-sm">
         <h3 className="text-lg font-semibold text-foreground mb-6">Data Management</h3>
@@ -213,7 +327,7 @@ export default function SettingsPage() {
           </div>
 
           {/* Clear Data */}
-          <div className="flex items-start justify-between p-4 bg-red-50 dark:bg-red-900/10 rounded-lg border border-red-200 dark:border-red-800">
+          <div className="flex items-start justify-between p-4 rounded-lg border bg-destructive/5 border-destructive/30">
             <div>
               <h4 className="font-medium text-foreground">Clear All Data</h4>
               <p className="text-sm text-muted-foreground mt-1">
