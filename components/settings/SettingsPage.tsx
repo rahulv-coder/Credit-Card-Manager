@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Download, Trash2, Upload, Sun, Moon, Sparkles, Check, User, Lock } from 'lucide-react';
 import type { Card as CardType, EMI, Loan, Transaction, FinancialData } from '@/lib/types';
 import { getSupabaseBrowserClient } from '@/lib/supabase/client';
+import { useMonthlyBudget } from '@/hooks/use-monthly-budget';
+import { DollarSign } from 'lucide-react';
 
 type ExportCard = CardType & { transactions: Transaction[] };
 type ExportLoan = Loan & { emis: EMI[] };
@@ -109,7 +111,7 @@ const normalizeImportedData = (imported: unknown): FinancialData | null => {
 };
 
 export default function SettingsPage() {
-  const { data, importData, clearAllData, profile, updateProfile } = useData();
+  const { data, importData, clearAllData, profile, updateProfile, user } = useData();
   const { resolvedTheme, setTheme } = useTheme();
   const [importError, setImportError] = useState('');
 
@@ -169,6 +171,23 @@ export default function SettingsPage() {
     setPwLoading(false);
     setPwForm({ newPassword: '', confirmPassword: '' });
     setTimeout(() => setPwMsg(''), 4000);
+  };
+
+  // Salary / Budget
+  const { salary, setSalary, loaded: salaryLoaded } = useMonthlyBudget(user?.id);
+  const [salaryInput, setSalaryInput] = useState('');
+  const [salaryMsg, setSalaryMsg] = useState('');
+
+  useEffect(() => {
+    if (salaryLoaded) setSalaryInput(salary > 0 ? String(salary) : '');
+  }, [salaryLoaded, salary]);
+
+  const handleSaveSalary = () => {
+    const val = parseFloat(salaryInput);
+    if (!salaryInput || isNaN(val) || val < 0) { setSalaryMsg('Please enter a valid salary amount.'); return; }
+    setSalary(val);
+    setSalaryMsg('Salary saved successfully.');
+    setTimeout(() => setSalaryMsg(''), 3000);
   };
 
   const handleExportData = () => {
@@ -298,6 +317,41 @@ export default function SettingsPage() {
             </p>
           )}
         </div>
+      </Card>
+
+      {/* Salary & Budget */}
+      <Card className="p-6 border border-border shadow-sm">
+        <div className="flex items-center gap-2 mb-5">
+          <DollarSign size={18} className="text-primary" />
+          <h3 className="text-lg font-semibold text-foreground">Salary &amp; Budget</h3>
+        </div>
+        <p className="text-sm text-muted-foreground mb-4">
+          Set your monthly salary to track spending on the dashboard. This is stored locally on your device.
+        </p>
+        <div className="flex gap-3 items-end max-w-sm">
+          <div className="flex-1 space-y-1.5">
+            <Label>Monthly Salary (₹)</Label>
+            <Input
+              type="number"
+              placeholder="e.g. 50000"
+              value={salaryInput}
+              min="0"
+              onChange={(e) => setSalaryInput(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSaveSalary()}
+            />
+          </div>
+          <Button onClick={handleSaveSalary}>Save</Button>
+        </div>
+        {salary > 0 && (
+          <p className="text-xs text-muted-foreground mt-2">
+            Current: <strong>₹{salary.toLocaleString('en-IN')}</strong> / month
+          </p>
+        )}
+        {salaryMsg && (
+          <p className={`text-sm mt-2 ${salaryMsg.startsWith('Please') ? 'text-destructive' : 'text-green-500'}`}>
+            {salaryMsg}
+          </p>
+        )}
       </Card>
 
       {/* Appearance */}

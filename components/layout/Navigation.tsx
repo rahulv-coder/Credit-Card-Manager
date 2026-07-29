@@ -10,6 +10,8 @@ import {
   Calendar,
   Settings,
   BarChart2,
+  HandCoins,
+  Handshake,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -37,6 +39,16 @@ const navItems = [
     label: 'EMIs',
     href: '/emis',
     icon: Calendar,
+  },
+  {
+    label: 'Lendings',
+    href: '/lendings',
+    icon: HandCoins,
+  },
+  {
+    label: 'Split Groups',
+    href: '/groups',
+    icon: Handshake,
   },
   {
     label: 'Analytics',

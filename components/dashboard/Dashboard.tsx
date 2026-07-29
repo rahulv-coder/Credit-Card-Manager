@@ -17,10 +17,13 @@ import QuickActions from './QuickActions';
 import SpendingChart from './SpendingChart';
 import SpendingByCategory from './SpendingByCategory';
 import CardBillsDue from './CardBillsDue';
+import SalaryTracker from './SalaryTracker';
+import { useMonthlyBudget } from '@/hooks/use-monthly-budget';
 
 export default function Dashboard() {
   const { data, profile, user } = useData();
   const firstName = profile?.firstName || user?.email?.split('@')[0] || 'there';
+  const { salary, loaded: salaryLoaded } = useMonthlyBudget(user?.id);
 
   const totalBalance = calculateTotalBalance(data.cards, data.transactions);
   const totalCreditLimit = calculateTotalCreditLimit(data.cards);
@@ -61,6 +64,13 @@ export default function Dashboard() {
         <RecentTransactions transactions={recentTransactions} cards={data.cards} />
         <UpcomingEMIs emis={upcomingEMIs} loans={data.loans} />
       </div>
+
+      {/* Salary Tracker */}
+      <SalaryTracker
+        transactions={data.transactions}
+        salary={salary}
+        salaryLoaded={salaryLoaded}
+      />
 
       {/* Spending by Category + Card Bills Due */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

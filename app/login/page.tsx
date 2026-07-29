@@ -7,6 +7,7 @@ import {
   CreditCard, DollarSign, TrendingUp, Wallet, BarChart2,
   PiggyBank, Banknote, Landmark, Receipt, ArrowUpRight,
   Percent, CircleDollarSign, TrendingDown, Building2,
+  Eye, EyeOff,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -49,6 +50,9 @@ export default function LoginPage() {
   const [mobile, setMobile] = useState('')
   const [isFemale, setIsFemale] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirm, setShowConfirm] = useState(false)
+  const [confirmPassword, setConfirmPassword] = useState('')
 
   useEffect(() => {
     if (!authLoading && user) {
@@ -68,6 +72,12 @@ export default function LoginPage() {
     } else {
       if (!firstName.trim() || !lastName.trim()) {
         toast.error('First name and last name are required.')
+        setLoading(false)
+        return
+      }
+
+      if (password !== confirmPassword) {
+        toast.error('Passwords do not match.')
         setLoading(false)
         return
       }
@@ -93,6 +103,7 @@ export default function LoginPage() {
         setLastName('')
         setMobile('')
         setIsFemale(false)
+        setConfirmPassword('')
       }
     }
 
@@ -296,8 +307,59 @@ export default function LoginPage() {
               <Label htmlFor="password" className="text-amber-200/60 text-xs font-medium uppercase tracking-wider">
                 Password
               </Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
-                placeholder="At least 6 characters" minLength={6} required className={inputCls} />
+              <div className="relative">
+                <Input id="password" type={showPassword ? 'text' : 'password'} value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  placeholder="At least 6 characters" minLength={6} required
+                  className={inputCls + ' pr-10'} />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-200/40 hover:text-amber-200/80 transition-colors"
+                  tabIndex={-1}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+            </div>
+
+            {/* Confirm password — sign up only */}
+            <div
+              style={{
+                display: 'grid',
+                gridTemplateRows: mode === 'signup' ? '1fr' : '0fr',
+                transition: 'grid-template-rows 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+              }}
+            >
+              <div style={{ overflow: 'hidden', opacity: mode === 'signup' ? 1 : 0, transition: 'opacity 0.35s ease' }}>
+                <div className="space-y-1.5 pb-1">
+                  <Label htmlFor="confirmPassword" className="text-amber-200/60 text-xs font-medium uppercase tracking-wider">
+                    Confirm Password
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      type={showConfirm ? 'text' : 'password'}
+                      value={confirmPassword}
+                      onChange={(e) => setConfirmPassword(e.target.value)}
+                      placeholder="Re-enter password"
+                      required={mode === 'signup'}
+                      tabIndex={mode === 'signup' ? undefined : -1}
+                      className={inputCls + ' pr-10'}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirm((v) => !v)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-200/40 hover:text-amber-200/80 transition-colors"
+                      tabIndex={-1}
+                      aria-label={showConfirm ? 'Hide password' : 'Show password'}
+                    >
+                      {showConfirm ? <EyeOff size={16} /> : <Eye size={16} />}
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <button
