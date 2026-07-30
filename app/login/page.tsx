@@ -68,6 +68,9 @@ export default function LoginPage() {
       const result = await signIn(email, password)
       if (result.error) {
         toast.error(result.error.message)
+      } else {
+        router.replace('/')
+        return
       }
     } else {
       if (!firstName.trim() || !lastName.trim()) {
@@ -112,6 +115,18 @@ export default function LoginPage() {
 
   const inputCls =
     'bg-white/5 border-amber-400/20 text-amber-50 placeholder:text-amber-200/30 focus-visible:ring-amber-400/25 focus-visible:border-amber-400/60 transition-colors'
+
+  if (authLoading || user) {
+    return (
+      <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4">
+        <div
+          className="absolute inset-0"
+          style={{ background: 'linear-gradient(135deg, #000000 0%, #0a0700 28%, #140c00 60%, #000000 100%)' }}
+        />
+        <div className="relative z-10 text-sm text-amber-200/60">Redirecting...</div>
+      </div>
+    )
+  }
 
   return (
     <div className="min-h-screen relative overflow-hidden flex items-center justify-center p-4">

@@ -1,27 +1,72 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-
-const STORAGE_KEY_PREFIX = 'ccm_monthly_salary_';
+import { getSupabaseBrowserClient } from '@/lib/supabase/client';
 
 export function useMonthlyBudget(userId?: string) {
-  const key = STORAGE_KEY_PREFIX + (userId || 'default');
   const [salary, setSalaryState] = useState<number>(0);
   const [loaded, setLoaded] = useState(false);
+  const supabase = getSupabaseBrowserClient();
 
   useEffect(() => {
-    const stored = localStorage.getItem(key);
-    setSalaryState(stored ? parseFloat(stored) || 0 : 0);
-    setLoaded(true);
-  }, [key]);
+    let cancelled = false;
+
+    const loadSalary = async () => {
+      setLoaded(false);
+
+      if (!supabase || !userId) {
+        if (!cancelled) {
+          setSalaryState(0);
+          setLoaded(true);
+        }
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from('monthly_budgets')
+        .select('monthly_salary')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error('[useMonthlyBudget] load error:', error);
+        setSalaryState(0);
+        setLoaded(true);
+        return;
+      }
+
+      if (data) {
+        setSalaryState(Number(data.monthly_salary) || 0);
+        setLoaded(true);
+        return;
+      }
+
+      setSalaryState(0);
+      setLoaded(true);
+    };
+
+    loadSalary();
+
+    return () => { cancelled = true; };
+  }, [supabase, userId]);
 
   const setSalary = useCallback(
-    (amount: number) => {
+    async (amount: number) => {
       const clamped = Math.max(0, amount);
       setSalaryState(clamped);
-      localStorage.setItem(key, String(clamped));
+
+      if (supabase && userId) {
+        const { error } = await supabase.from('monthly_budgets').upsert({
+          user_id: userId,
+          monthly_salary: clamped,
+          updated_at: Date.now(),
+        });
+        if (error) console.error('[useMonthlyBudget] save error:', error);
+      }
     },
-    [key]
+    [supabase, userId]
   );
 
   return { salary, setSalary, loaded };

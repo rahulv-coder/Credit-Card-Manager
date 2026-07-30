@@ -182,10 +182,10 @@ export default function SettingsPage() {
     if (salaryLoaded) setSalaryInput(salary > 0 ? String(salary) : '');
   }, [salaryLoaded, salary]);
 
-  const handleSaveSalary = () => {
+  const handleSaveSalary = async () => {
     const val = parseFloat(salaryInput);
     if (!salaryInput || isNaN(val) || val < 0) { setSalaryMsg('Please enter a valid salary amount.'); return; }
-    setSalary(val);
+    await setSalary(val);
     setSalaryMsg('Salary saved successfully.');
     setTimeout(() => setSalaryMsg(''), 3000);
   };
